@@ -18,3 +18,5 @@ Software required:
 So far this code is written in CircuitPython, but I may eventually want/need to port it to C. We shall see, ha ha.
 
 I have been using Visual Studio Code but I don't think that matters.
+
+Note: The main code is in a file called "main.py", to avoid the irritating warnings VCCode throws when the usual name, "code.py", is used.
