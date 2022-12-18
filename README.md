@@ -9,6 +9,7 @@ Adafruit!
  * VL53L0X time-of-flight proximity sensor
  * APDS-9960 proximity/gesture sensor
  * 1 watt audio amplifier and speaker
+
 and a breadboard and a few wires to put them together!
 
 Software required:
