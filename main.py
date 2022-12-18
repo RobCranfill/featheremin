@@ -67,8 +67,11 @@ while True:
         print(f"Saw gesture: {g}")
         if g == 1:
             bleepTime -= 0.05
+            if bleepTime <= 0:
+                bleepTime = 0
         if g == 2:
             bleepTime += 0.05
+        print(f"Delay now {bleepTime}")
 
 print("Done!")
 
