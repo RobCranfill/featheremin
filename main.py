@@ -65,13 +65,20 @@ while True:
     g = gesture.gesture()
     if g != 0:
         print(f"Saw gesture: {g}")
-        if g == 1:
+        if g == 1: # up
             bleepTime -= 0.05
             if bleepTime <= 0:
                 bleepTime = 0
-        if g == 2:
+        elif g == 2: # down
             bleepTime += 0.05
-        print(f"Delay now {bleepTime}")
+        elif g == 3: # right-to-left
+            sleepTime += 0.1
+        elif g == 4: # left-to-right
+            sleepTime -= 0.1
+            if sleepTime <= 0:
+                sleepTime = 0
+
+        print(f"Delay {bleepTime}, sleep {sleepTime}")
 
 print("Done!")
 
