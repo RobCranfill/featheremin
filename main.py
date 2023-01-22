@@ -100,37 +100,44 @@ sleepTime = 0.2
 bleepTime = 0.2
 
 nTries = 100
-sampleRate = 1000
 iter = 1
 sampleRateLast = -1
 
 useSineWave = True
 
+chunkMode = True
+
 while True:
     r = tof.range
     if (r < 500):
-        sampleRate = int(rangeToRate(r))
-        if sampleRate != sampleRateLast:
 
-            dac.stop()
+        if chunkMode:
+            sampleRate = int(rangeToRate(r))
+            if sampleRate != sampleRateLast:
 
-            # sampleRate = int(30*(500-r) + 1000)
-            # sampleRate = int(30*r + 1000)
+                dac.stop()
 
-            useSineWave = (((iter // 100) % 2) == 1)
-            print(f"#{iter}: {r} mm -> {sampleRate} Hz {'sine' if useSineWave else 'square'}")
+                # sampleRate = int(30*(500-r) + 1000)
+                # sampleRate = int(30*r + 1000)
 
-            if useSineWave:
-                wave = audiocore.RawSample(sine_wave_data, sample_rate=sampleRate)
-            else:
-                wave = audiocore.RawSample(square_wave_data, sample_rate=sampleRate)
+                # for fun, switch sine/square every 100 iterations
+                useSineWave = (((iter // 100) % 2) == 1)
+                print(f"#{iter}: {r} mm -> {sampleRate} Hz {'sine' if useSineWave else 'square'}")
+
+                if useSineWave:
+                    wave = audiocore.RawSample(sine_wave_data, sample_rate=sampleRate)
+                else:
+                    wave = audiocore.RawSample(square_wave_data, sample_rate=sampleRate)
+                
+                sampleRateLast = sampleRate
+                dac.play(wave, loop=True)
+                time.sleep(0.1)
+            # time.sleep(bleepTime)
+            # dac.stop()
+
+        else: # not chunkMode
+            print("dunno!")
             
-            sampleRateLast = sampleRate
-            dac.play(wave, loop=True)
-            time.sleep(0.1)
-        # time.sleep(bleepTime)
-        # dac.stop()
-
     else:
         dac.stop()
         # pass
