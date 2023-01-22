@@ -21,7 +21,6 @@ AUDIO_OUT_PIN = board.A1
 
 print("hello fetheremin!")
 
-
 # Generate one period of a sine wave and a square wave
 length = 8000 // 440
 sine_wave_data = array.array("H", [0] * length)
@@ -33,11 +32,11 @@ for i in range(length):
     else:
         square_wave_data[i] = int(2 ** 15)
 
-for i in range(1, 11):
-    print(f"sin({i}) = {sine_wave_data[i]}")
-print()
-for i in range(1, 11):
-    print(f"squ({i}) = {square_wave_data[i]}")
+# for i in range(1, 11):
+#     print(f"sin({i}) = {sine_wave_data[i]}")
+# print()
+# for i in range(1, 11):
+#     print(f"squ({i}) = {square_wave_data[i]}")
 
 
 def init_hardware():
@@ -105,7 +104,8 @@ sampleRateLast = -1
 
 useSineWave = True
 
-chunkMode = True
+chunkMode = False
+chunkSleep = 0.1
 
 while True:
     r = tof.range
@@ -136,7 +136,27 @@ while True:
             # dac.stop()
 
         else: # not chunkMode
-            print("dunno!")
+            
+            # sampleRate = int(rangeToRate(r))
+            sampleRate = int(30*r + 1000)
+
+            # dac.stop()
+
+            # for fun, switch sine/square every 100 iterations
+            useSineWave = (((iter // 100) % 2) == 1)
+            print(f"chunk #{iter}: {r} mm -> {sampleRate} Hz {'sine' if useSineWave else 'square'}")
+
+            if useSineWave:
+                wave = audiocore.RawSample(sine_wave_data, sample_rate=sampleRate)
+            else:
+                wave = audiocore.RawSample(square_wave_data, sample_rate=sampleRate)
+            
+            dac.play(wave, loop=True)
+
+            time.sleep(chunkSleep)
+
+            # time.sleep(bleepTime)
+            # dac.stop()
             
     else:
         dac.stop()
