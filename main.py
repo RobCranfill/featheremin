@@ -143,6 +143,9 @@ while True:
     if wheelPosition != wheelPositionLast:
         wheelPositionLast = wheelPosition
         print(f"Position: {wheelPosition}")
+        chunkSleep = 0.1 + wheelPosition/100
+        if chunkSleep < 0:
+            chunkSleep = 0
 
     g = gesture.gesture()
     if g == 1:
@@ -188,7 +191,7 @@ while True:
 
             # dac.stop()
 
-            print(f"chunk #{iter}: {r} mm -> {sampleRate} Hz {'sine' if useSineWave else 'square'}")
+            print(f"chunk #{iter}: {r} mm -> {sampleRate} Hz {chunkSleep} {'sine' if useSineWave else 'square'}")
 
             if useSineWave:
                 wave = audiocore.RawSample(sine_wave_data, sample_rate=sampleRate)
