@@ -1,6 +1,6 @@
 
 """Make noises, based on a time-of-flight sensor.
-    With harware reset.
+    With hardware reset.
 """
 
 import array
@@ -15,8 +15,13 @@ import sys
 
 import adafruit_vl53l0x
 
+# https://learn.adafruit.com/adafruit-apds9960-breakout/circuitpython
+from adafruit_apds9960.apds9960 import APDS9960
 
+VL53L0X_RESET_OUT = board.A0
 AUDIO_OUT_PIN = board.A1
+
+ONE_OCTAVE = [440.00, 466.16, 493.88, 523.25, 554.37, 587.33, 622.25, 659.25, 698.46, 739.99, 83.99, 830.61]
 
 
 print("hello fetheremin!")
@@ -40,23 +45,28 @@ for i in range(length):
 
 
 def init_hardware():
-    
-    # reset the ToF sensor
-    print("Resetting ToF...")
-    xshut = digitalio.DigitalInOut(board.A0)
-    xshut.direction = digitalio.Direction.OUTPUT
-    # take it low, then high
-    xshut.value = 0
-    time.sleep(0.1)
-    xshut.value = 1
-    print("Reset ToF OK!?")
+    """Initialize various hardware items.
+    Namely, the I2C bus, and the Time of Flight sensor
 
-    # Initialize I2C bus and sensor for the Time of Flight sensor
+    Returns:
+        list of objects: the various sensors initialized: tof, apds, rotEnc, lcdDisp
+    """
+
+    # reset the ToF sensor - take it low, then high
+    print("Resetting VL53L0X...")
+    xshut = digitalio.DigitalInOut(VL53L0X_RESET_OUT)
+    xshut.direction = digitalio.Direction.OUTPUT
+    xshut.value = 0
+    time.sleep(0.1) # needed?
+    xshut.value = 1
+    print("Reset OK!?")
+
+
     USE_STEMMA = True
     if USE_STEMMA:
-        tof_i2c = board.STEMMA_I2C()
+        i2c = board.STEMMA_I2C()
     else:
-        tof_i2c = busio.I2C(board.D9, board.D6)
+        i2c = busio.I2C(board.D9, board.D6)
 
     # This seems to f* up the sensor!
     #
@@ -65,12 +75,17 @@ def init_hardware():
     # print(f"{tof_i2c.scan()}")
     # print("----------------------")
     
-    tof = adafruit_vl53l0x.VL53L0X(tof_i2c)
+    tof = adafruit_vl53l0x.VL53L0X(i2c)
     print("ToF init OK")
 
-    return tof
+    apds = APDS9960(i2c)
+    apds.enable_proximity = True
+    apds.enable_gesture = True
+    apds.rotation = 180
 
-ONE_OCTAVE = [440.00, 466.16, 493.88, 523.25, 554.37, 587.33, 622.25, 659.25, 698.46, 739.99, 83.99, 830.61]
+    rotEnc = None
+    lcdDisp = None
+    return tof, apds, rotEnc, lcdDisp
 
 # map distance in millimeters to a sample rate in Hz
 # mm in range (0,500)
@@ -91,7 +106,7 @@ def rangeToRate(mm: int) -> float:
     return sr
 
 
-tof = init_hardware()
+tof, gesture, wheel, display = init_hardware()
  
 dac = audiopwmio.PWMAudioOut(AUDIO_OUT_PIN)
 
@@ -108,8 +123,21 @@ chunkMode = False
 chunkSleep = 0.1
 
 while True:
+
+    g = gesture.gesture()
+    if g == 1:
+        print("sine wave")
+        useSineWave = True
+    elif g == 2:
+        print("square wave")
+        useSineWave = False
+    elif g == 3:
+        print("left")
+    elif g == 4:
+        print("right")
+
     r = tof.range
-    if (r < 500):
+    if r > 0 and r < 500:
 
         if chunkMode:
             sampleRate = int(rangeToRate(r))
@@ -120,8 +148,6 @@ while True:
                 # sampleRate = int(30*(500-r) + 1000)
                 # sampleRate = int(30*r + 1000)
 
-                # for fun, switch sine/square every 100 iterations
-                useSineWave = (((iter // 100) % 2) == 1)
                 print(f"#{iter}: {r} mm -> {sampleRate} Hz {'sine' if useSineWave else 'square'}")
 
                 if useSineWave:
@@ -142,8 +168,6 @@ while True:
 
             # dac.stop()
 
-            # for fun, switch sine/square every 100 iterations
-            useSineWave = (((iter // 100) % 2) == 1)
             print(f"chunk #{iter}: {r} mm -> {sampleRate} Hz {'sine' if useSineWave else 'square'}")
 
             if useSineWave:
