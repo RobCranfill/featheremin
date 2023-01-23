@@ -8,7 +8,7 @@ import audiocore
 import audiopwmio
 import board
 import busio
-import digitalio
+import digitalio as feather_digitalio
 import math
 import time
 import sys
@@ -17,6 +17,10 @@ import adafruit_vl53l0x
 
 # https://learn.adafruit.com/adafruit-apds9960-breakout/circuitpython
 from adafruit_apds9960.apds9960 import APDS9960
+
+# https://docs.circuitpython.org/projects/seesaw/en/latest/
+from adafruit_seesaw import seesaw, rotaryio, digitalio
+
 
 VL53L0X_RESET_OUT = board.A0
 AUDIO_OUT_PIN = board.A1
@@ -54,8 +58,8 @@ def init_hardware():
 
     # reset the ToF sensor - take it low, then high
     print("Resetting VL53L0X...")
-    xshut = digitalio.DigitalInOut(VL53L0X_RESET_OUT)
-    xshut.direction = digitalio.Direction.OUTPUT
+    xshut = feather_digitalio.DigitalInOut(VL53L0X_RESET_OUT)
+    xshut.direction = feather_digitalio.Direction.OUTPUT
     xshut.value = 0
     time.sleep(0.1) # needed?
     xshut.value = 1
@@ -68,13 +72,15 @@ def init_hardware():
     else:
         i2c = busio.I2C(board.D9, board.D6)
 
-    # This seems to f* up the sensor!
+    # For fun
     #
-    # print("- I2C scan -----------")
-    # tof_i2c.try_lock()
-    # print(f"{tof_i2c.scan()}")
-    # print("----------------------")
-    
+    print("- I2C scan -----------")
+    i2c.try_lock()
+    print(f"{i2c.scan()}")
+    print("----------------------")
+    i2c.unlock()
+
+
     tof = adafruit_vl53l0x.VL53L0X(i2c)
     print("ToF init OK")
 
@@ -83,7 +89,16 @@ def init_hardware():
     apds.enable_gesture = True
     apds.rotation = 180
 
+
+    ss = seesaw.Seesaw(i2c, addr=0x36)
+    seesaw_product = (ss.get_version() >> 16) & 0xFFFF
+    print(f"Found Seesaw product {seesaw_product}")
     rotEnc = None
+    if seesaw_product != 4991:
+        print("Wrong firmware loaded? Expected 4991")
+    else:
+        rotEnc = rotaryio.IncrementalEncoder(ss)
+
     lcdDisp = None
     return tof, apds, rotEnc, lcdDisp
 
@@ -118,11 +133,16 @@ iter = 1
 sampleRateLast = -1
 
 useSineWave = True
-
+wheelPositionLast = None
 chunkMode = False
 chunkSleep = 0.1
 
 while True:
+
+    wheelPosition = wheel.position
+    if wheelPosition != wheelPositionLast:
+        wheelPositionLast = wheelPosition
+        print(f"Position: {wheelPosition}")
 
     g = gesture.gesture()
     if g == 1:

@@ -15,7 +15,7 @@ So far, (almost) all from Adafruit!
 ## Software required
  * Adafruit CircuitPython 7 (version 7.3.3 used)
  * adafruit_vl53l0x.mpy
- * adafruit_apds9960 support lib
+ * adafruit_apds9960 support lib (3 files)
 
 ## Dev environment
 So far this code is written in CircuitPython, but I may eventually want/need to port it to C. We shall see, ha ha.
