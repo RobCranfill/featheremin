@@ -153,8 +153,10 @@ sampleRateLast = -1
 
 useSineWave = True
 wheelPositionLast = None
+
 chunkMode = False
 chunkSleep = 0.1
+display.setTextArea2(f"Sleep: {chunkSleep:.2f}")
 
 waveIndex = 0
 waveName  = waves[waveIndex][0]
@@ -194,8 +196,15 @@ while True:
 
     elif g == 3:
         print("left")
+        chunkSleep -= 0.01
+        if chunkSleep < 0:
+            chunkSleep = 0
+        display.setTextArea2(f"Sleep: {chunkSleep:.2f}")
+
     elif g == 4:
         print("right")
+        chunkSleep += 0.01
+        display.setTextArea2(f"Sleep: {chunkSleep:.2f}")
 
     r = tof.range
     if r > 0 and r < 500:
