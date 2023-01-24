@@ -9,7 +9,7 @@ So far, (almost) all from Adafruit!
  * VL53L0X time-of-flight proximity sensor
  * APDS-9960 proximity/gesture sensor
  * 1 watt "Stemma" audio amplifier and speaker
- * 20 watt audio amp with external speaker
+ *  and/or 20 watt audio amp with external speaker
  * a breadboard or two, and a few wires to put them together!
 
 ## Software required
