@@ -12,6 +12,8 @@ import math
 import time
 import sys
 
+import feathereminDisplay
+
 import adafruit_vl53l0x
 
 # https://learn.adafruit.com/adafruit-apds9960-breakout/circuitpython
@@ -26,13 +28,12 @@ AUDIO_OUT_PIN = board.A1
 
 ONE_OCTAVE = [440.00, 466.16, 493.88, 523.25, 554.37, 587.33, 622.25, 659.25, 698.46, 739.99, 83.99, 830.61]
 
-
 print("hello fetheremin!")
 
-# Generate one period of a sine wave and a square wave.
-# should there be an odd or even number of samples? we want to start and end with zeros.
+# Generate one period of various waveforms.
+# Should there be an odd or even number of samples? we want to start and end with zeros, or at least some number.
+#
 length = 8000 // 440 + 1
-print(f"length {length}")
 
 sine_wave_data = array.array("H", [0] * length)
 square_wave_data = array.array("H", [0] * length)
@@ -43,9 +44,9 @@ sawtooth_down_wave_data = array.array("H", [0] * length)
 waves = [
     ("sine", sine_wave_data), 
     ("square", square_wave_data), 
-    ("tri", triangle_wave_data),
-    ("up", sawtooth_up_wave_data),
-    ("down", sawtooth_down_wave_data)]
+    ("triangle", triangle_wave_data),
+    ("saw up", sawtooth_up_wave_data),
+    ("saw down", sawtooth_down_wave_data)]
 
 
 for i in range(length):
@@ -59,65 +60,66 @@ for i in range(length):
     sawtooth_up_wave_data[i] = int(i*2**16/length)
     sawtooth_down_wave_data[i] = 2**16 - sawtooth_up_wave_data[i] - 1
 
-if True:
-    print(f"i, sine_wave, square_wave, triangle_wave, sawtooth_up_wave")
-    for i in range(length):
-        print(f"({i}, {sine_wave_data[i]}, {square_wave_data[i]}, {triangle_wave_data[i]}, {sawtooth_up_wave_data[i]})")
+print(f"Wave tables: {length} entries")
+print(f"{[w[0] for w in waves]}")
+for i in range(length):
+    print(f"({i},\t{sine_wave_data[i]},\t{square_wave_data[i]},\t{triangle_wave_data[i]},\t{sawtooth_up_wave_data[i]},\t{sawtooth_down_wave_data[i]})")
 
 
 def init_hardware():
     """Initialize various hardware items.
-    Namely, the I2C bus, and the Time of Flight sensor
+    Namely, the I2C bus, Time of Flight sensor, gesture sensor, rotary encoder, OLED display.
+
+    None of this checks for errors (missing hardware) yet - it will just malf.
 
     Returns:
-        list of objects: the various sensors initialized: tof, apds, rotEnc, lcdDisp
+        list of objects: the various harware items initialized.
     """
 
-    # reset the ToF sensor - take it low, then high
+    # Easist way to init I2C on a Feather:
+    i2c = board.STEMMA_I2C()
+
+    # For fun
+    i2c.try_lock()
+    print(f"I2C scan: {[hex(x) for x in i2c.scan()]}")
+    i2c.unlock()
+
+    # ----------------- VL53L0X time-of-flight sensor 
+    # reset the ToF sensor - take its XSHUT pin low, then high
     print("Resetting VL53L0X...")
     xshut = feather_digitalio.DigitalInOut(VL53L0X_RESET_OUT)
     xshut.direction = feather_digitalio.Direction.OUTPUT
     xshut.value = 0
     time.sleep(0.1) # needed?
     xshut.value = 1
-    print("Reset OK!?")
-
-
-    USE_STEMMA = True
-    if USE_STEMMA:
-        i2c = board.STEMMA_I2C()
-    else:
-        i2c = busio.I2C(board.D9, board.D6)
-
-    # For fun
-    #
-    print("- I2C scan -----------")
-    i2c.try_lock()
-    print(f"{i2c.scan()}")
-    print("----------------------")
-    i2c.unlock()
-
 
     tof = adafruit_vl53l0x.VL53L0X(i2c)
     print("ToF init OK")
 
+
+    # ----------------- APDS9960 gesture/proximity/color sensor 
     apds = APDS9960(i2c)
     apds.enable_proximity = True
     apds.enable_gesture = True
     apds.rotation = 180
 
 
+    # ----------------- Rotary encoder
     ss = seesaw.Seesaw(i2c, addr=0x36)
-    seesaw_product = (ss.get_version() >> 16) & 0xFFFF
-    print(f"Found Seesaw product {seesaw_product}")
-    rotEnc = None
-    if seesaw_product != 4991:
-        print("Wrong firmware loaded? Expected 4991")
-    else:
-        rotEnc = rotaryio.IncrementalEncoder(ss)
+    rotEnc = rotaryio.IncrementalEncoder(ss)
 
-    lcdDisp = None
-    return tof, apds, rotEnc, lcdDisp
+    # why bother with all this?
+    # seesaw_product = (ss.get_version() >> 16) & 0xFFFF
+    # print(f"Found Seesaw product {seesaw_product}")
+    # if seesaw_product != 4991:
+    #     print("Wrong firmware loaded? Expected 4991")
+
+
+    # ----------------- OLED display
+    oledDisp = feathereminDisplay.FeathereminDisplay()
+
+    return tof, apds, rotEnc, oledDisp
+
 
 # map distance in millimeters to a sample rate in Hz
 # mm in range (0,500)
@@ -155,10 +157,11 @@ chunkMode = False
 chunkSleep = 0.1
 
 waveIndex = 0
-waveName = waves[waveIndex][0]
+waveName  = waves[waveIndex][0]
 waveTable = waves[waveIndex][1]
 
 print(f"Wave #{waveIndex}: {waveName}")
+display.setTextArea1(f"Waveform: {waveName}")
 
 while True:
 
@@ -175,17 +178,19 @@ while True:
         waveIndex += 1
         if waveIndex >= len(waves):
             waveIndex = 0
-        print(f"Wave #{waveIndex}: {waves[waveIndex][0]}")
-        waveName = waves[waveIndex][0]
+        waveName  = waves[waveIndex][0]
         waveTable = waves[waveIndex][1]
+        print(f"Wave #{waveIndex}: {waves[waveIndex][0]}")
+        display.setTextArea1(f"Waveform: {waveName}")
 
     elif g == 2:
         waveIndex -= 1
         if waveIndex < 0:
             waveIndex = len(waves) - 1
-        print(f"Wave #{waveIndex}: {waves[waveIndex][0]}")
-        waveName = waves[waveIndex][0]
+        waveName  = waves[waveIndex][0]
         waveTable = waves[waveIndex][1]
+        print(f"Wave #{waveIndex}: {waves[waveIndex][0]}")
+        display.setTextArea1(f"Waveform: {waveName}")
 
     elif g == 3:
         print("left")
@@ -239,5 +244,3 @@ while True:
         
     iter += 1
     # print("Done!")
-
-
