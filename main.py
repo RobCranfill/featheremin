@@ -1,4 +1,3 @@
-
 """Make noises, based on a time-of-flight sensor.
     With hardware reset.
 """
@@ -30,22 +29,40 @@ ONE_OCTAVE = [440.00, 466.16, 493.88, 523.25, 554.37, 587.33, 622.25, 659.25, 69
 
 print("hello fetheremin!")
 
-# Generate one period of a sine wave and a square wave
-length = 8000 // 440
+# Generate one period of a sine wave and a square wave.
+# should there be an odd or even number of samples? we want to start and end with zeros.
+length = 8000 // 440 + 1
+print(f"length {length}")
+
 sine_wave_data = array.array("H", [0] * length)
 square_wave_data = array.array("H", [0] * length)
+triangle_wave_data = array.array("H", [0] * length)
+sawtooth_up_wave_data = array.array("H", [0] * length)
+sawtooth_down_wave_data = array.array("H", [0] * length)
+
+waves = [
+    ("sine", sine_wave_data), 
+    ("square", square_wave_data), 
+    ("tri", triangle_wave_data),
+    ("up", sawtooth_up_wave_data),
+    ("down", sawtooth_down_wave_data)]
+
+
 for i in range(length):
     sine_wave_data[i] = int(math.sin(math.pi * 2 * i / length) * (2 ** 15) + 2 ** 15)
     if i < length/2:
         square_wave_data[i] = 0
+        triangle_wave_data[i] = 2 * int(2**16 * i/length)
     else:
-        square_wave_data[i] = int(2 ** 15)
+        square_wave_data[i] = int(2 ** 16)-1
+        triangle_wave_data[i] = triangle_wave_data[length-i-1]
+    sawtooth_up_wave_data[i] = int(i*2**16/length)
+    sawtooth_down_wave_data[i] = 2**16 - sawtooth_up_wave_data[i] - 1
 
-# for i in range(1, 11):
-#     print(f"sin({i}) = {sine_wave_data[i]}")
-# print()
-# for i in range(1, 11):
-#     print(f"squ({i}) = {square_wave_data[i]}")
+if True:
+    print(f"i, sine_wave, square_wave, triangle_wave, sawtooth_up_wave")
+    for i in range(length):
+        print(f"({i}, {sine_wave_data[i]}, {square_wave_data[i]}, {triangle_wave_data[i]}, {sawtooth_up_wave_data[i]})")
 
 
 def init_hardware():
@@ -137,6 +154,12 @@ wheelPositionLast = None
 chunkMode = False
 chunkSleep = 0.1
 
+waveIndex = 0
+waveName = waves[waveIndex][0]
+waveTable = waves[waveIndex][1]
+
+print(f"Wave #{waveIndex}: {waveName}")
+
 while True:
 
     wheelPosition = wheel.position
@@ -149,11 +172,21 @@ while True:
 
     g = gesture.gesture()
     if g == 1:
-        print("sine wave")
-        useSineWave = True
+        waveIndex += 1
+        if waveIndex >= len(waves):
+            waveIndex = 0
+        print(f"Wave #{waveIndex}: {waves[waveIndex][0]}")
+        waveName = waves[waveIndex][0]
+        waveTable = waves[waveIndex][1]
+
     elif g == 2:
-        print("square wave")
-        useSineWave = False
+        waveIndex -= 1
+        if waveIndex < 0:
+            waveIndex = len(waves) - 1
+        print(f"Wave #{waveIndex}: {waves[waveIndex][0]}")
+        waveName = waves[waveIndex][0]
+        waveTable = waves[waveIndex][1]
+
     elif g == 3:
         print("left")
     elif g == 4:
@@ -173,32 +206,26 @@ while True:
 
                 print(f"#{iter}: {r} mm -> {sampleRate} Hz {'sine' if useSineWave else 'square'}")
 
-                if useSineWave:
-                    wave = audiocore.RawSample(sine_wave_data, sample_rate=sampleRate)
-                else:
-                    wave = audiocore.RawSample(square_wave_data, sample_rate=sampleRate)
-                
+                waveSample = audiocore.RawSample(waveTable, sample_rate=sampleRate)
+
                 sampleRateLast = sampleRate
-                dac.play(wave, loop=True)
+                dac.play(waveSample, loop=True)
                 time.sleep(0.1)
             # time.sleep(bleepTime)
             # dac.stop()
 
-        else: # not chunkMode
+        else: # "continuous", not chunkMode
             
             # sampleRate = int(rangeToRate(r))
             sampleRate = int(30*r + 1000)
 
             # dac.stop()
 
-            print(f"chunk #{iter}: {r} mm -> {sampleRate} Hz {chunkSleep} {'sine' if useSineWave else 'square'}")
+            print(f"Cont: {waveName} #{iter}: {r} mm -> {sampleRate} Hz {chunkSleep} ")
 
-            if useSineWave:
-                wave = audiocore.RawSample(sine_wave_data, sample_rate=sampleRate)
-            else:
-                wave = audiocore.RawSample(square_wave_data, sample_rate=sampleRate)
+            waveSample = audiocore.RawSample(waveTable, sample_rate=sampleRate)
             
-            dac.play(wave, loop=True)
+            dac.play(waveSample, loop=True)
 
             time.sleep(chunkSleep)
 
@@ -212,4 +239,5 @@ while True:
         
     iter += 1
     # print("Done!")
+
 
