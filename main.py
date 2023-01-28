@@ -27,12 +27,14 @@ from adafruit_seesaw import seesaw, rotaryio, digitalio
 L0X_RESET_OUT = board.A0
 AUDIO_OUT_PIN = board.A1
 
+L4CD_ALTERNATE_I2C_ADDR = 0x31
+
 ONE_OCTAVE = [440.00, 466.16, 493.88, 523.25, 554.37, 587.33, 622.25, 659.25, 698.46, 739.99, 83.99, 830.61]
 
 print("Hello, fetheremin!")
 
 # Generate one period of various waveforms.
-# Should there be an odd or even number of samples? we want to start and end with zeros, or at least some number.
+# TODO: Should there be an odd or even number of samples? we want to start and end with zeros, or at least some number.
 #
 length = 8000 // 440 + 1
 
@@ -76,7 +78,7 @@ def showI2Cbus():
 
 def init_hardware():
     """Initialize various hardware items.
-    Namely, the I2C bus, Time of Flight sensor, gesture sensor, rotary encoder, OLED display.
+    Namely, the I2C bus, Time of Flight sensors, gesture sensor, and display.
 
     None of this checks for errors (missing hardware) yet - it will just malf.
 
@@ -101,40 +103,49 @@ def init_hardware():
     # VL53L0X sensor is now turned off
 
 
-    # Now reprogram the L4CD
+    # L4CD ToF
 
-    L4CD = adafruit_vl53l4cd.VL53L4CD(i2c, address=0x31)
-    # L4CD.set_address(0x31)  # address assigned should NOT be already in use
+    # First, see if it's there with the new address (left over from a previous run)
+    try:
+        L4CD = adafruit_vl53l4cd.VL53L4CD(i2c, address=L4CD_ALTERNATE_I2C_ADDR)
+        print(f"Found VL53L4CD at {hex(L4CD_ALTERNATE_I2C_ADDR)}")
+    except:
+        print(f"Did not find VL53L4CD at {hex(L4CD_ALTERNATE_I2C_ADDR)}, trying default....")
 
-    # L4CD = adafruit_vl53l4cd.VL53L4CD(i2c)
-    # L4CD.set_address(0x31)  # address assigned should NOT be already in use
+        #TODO: catch error here if no device at all
+        L4CD = adafruit_vl53l4cd.VL53L4CD(i2c)
+        L4CD.set_address(L4CD_ALTERNATE_I2C_ADDR)  # address assigned should NOT be already in use
+        print(f"Found VL53L4CD at default address; now set to {hex(L4CD_ALTERNATE_I2C_ADDR)}")
+    finally:
 
+        # OPTIONAL: can set non-default values
+        # TODO: move this to above initial setup?
+        L4CD.inter_measurement = 0
+        L4CD.timing_budget = 100 # must be low enough for ou
 
-    # OPTIONAL: can set non-default values
-    L4CD.inter_measurement = 0
-    L4CD.timing_budget = 100 # must be low enough for ou
+        print("--------------------")
+        print("VL53L4CD:")
+        model_id, module_type = L4CD.model_info
+        print(f"    Model ID: 0x{model_id:0X}")
+        print(f"    Module Type: 0x{module_type:0X}")
+        print(f"    Timing Budget: {L4CD.timing_budget}")
+        print(f"    Inter-Measurement: {L4CD.inter_measurement}")
+        print("--------------------")
 
-    print("--------------------")
-    print("VL53L4CD:")
-    model_id, module_type = L4CD.model_info
-    print(f"    Model ID: 0x{model_id:0X}")
-    print(f"    Module Type: 0x{module_type:0X}")
-    print(f"    Timing Budget: {L4CD.timing_budget}")
-    print(f"    Inter-Measurement: {L4CD.inter_measurement}")
-    print("--------------------")
+        L4CD.start_ranging()
+        print("VL53L4CD init OK")
 
-    L4CD.start_ranging()
 
 
     # Turn L0X back on and instantiate its object
+    print("Turning VL53L0X back on...")
     L0X_reset.value = 1
     L0X = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
 
     showI2Cbus()
 
-
     tof = adafruit_vl53l0x.VL53L0X(i2c)
-    print("ToF init OK")
+    print("VL53L0X init OK")
 
 
     # ----------------- APDS9960 gesture/proximity/color sensor 
@@ -206,7 +217,6 @@ while True:
         waveTable = waves[waveIndex][1]
         print(f"Wave #{waveIndex}: {waves[waveIndex][0]}")
         display.setTextArea1(f"Waveform: {waveName}")
-
     elif g == 2:
         waveIndex -= 1
         if waveIndex < 0:
@@ -215,24 +225,27 @@ while True:
         waveTable = waves[waveIndex][1]
         print(f"Wave #{waveIndex}: {waves[waveIndex][0]}")
         display.setTextArea1(f"Waveform: {waveName}")
-
     elif g == 3:
         print("left")
         chunkSleep -= 0.01
         if chunkSleep < 0:
             chunkSleep = 0
         display.setTextArea2(f"Sleep: {chunkSleep:.2f}")
-
     elif g == 4:
         print("right")
         chunkSleep += 0.01
         display.setTextArea2(f"Sleep: {chunkSleep:.2f}")
 
-    r = tof_L0X.range
-    if r > 0 and r < 500:
+    r1 = tof_L0X.range
+    if tof_L4CD.data_ready:
+        r2 = tof_L4CD.distance
+        tof_L4CD.clear_interrupt()
+        print(f"r2: {r2}")
+
+    if r1 > 0 and r1 < 500:
 
         if chunkMode:
-            sampleRate = int(rangeToRate(r))
+            sampleRate = int(rangeToRate(r1))
             if sampleRate != sampleRateLast:
 
                 dac.stop()
@@ -240,7 +253,7 @@ while True:
                 # sampleRate = int(30*(500-r) + 1000)
                 # sampleRate = int(30*r + 1000)
 
-                print(f"#{iter}: {r} mm -> {sampleRate} Hz {'sine' if useSineWave else 'square'}")
+                print(f"#{iter}: {r1} mm -> {sampleRate} Hz {'sine' if useSineWave else 'square'}")
 
                 waveSample = audiocore.RawSample(waveTable, sample_rate=sampleRate)
 
@@ -253,11 +266,11 @@ while True:
         else: # "continuous", not chunkMode
             
             # sampleRate = int(rangeToRate(r))
-            sampleRate = int(30*r + 1000)
+            sampleRate = int(30*r1 + 1000)
 
             # dac.stop()
 
-            print(f"Cont: {waveName} #{iter}: {r} mm -> {sampleRate} Hz {chunkSleep} ")
+            print(f"Cont: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz {chunkSleep} ")
 
             waveSample = audiocore.RawSample(waveTable, sample_rate=sampleRate)
             
