@@ -1,5 +1,5 @@
 """Make noises, based on a time-of-flight sensor.
-    With hardware reset.
+    With VL53L4CD.
 """
 
 import array
@@ -15,6 +15,7 @@ import sys
 import feathereminDisplay
 
 import adafruit_vl53l0x
+import adafruit_vl53l4cd
 
 # https://learn.adafruit.com/adafruit-apds9960-breakout/circuitpython
 from adafruit_apds9960.apds9960 import APDS9960
@@ -22,13 +23,13 @@ from adafruit_apds9960.apds9960 import APDS9960
 # https://docs.circuitpython.org/projects/seesaw/en/latest/
 from adafruit_seesaw import seesaw, rotaryio, digitalio
 
-
-VL53L0X_RESET_OUT = board.A0
+# GPIO pins used:
+L0X_RESET_OUT = board.A0
 AUDIO_OUT_PIN = board.A1
 
 ONE_OCTAVE = [440.00, 466.16, 493.88, 523.25, 554.37, 587.33, 622.25, 659.25, 698.46, 739.99, 83.99, 830.61]
 
-print("hello fetheremin!")
+print("Hello, fetheremin!")
 
 # Generate one period of various waveforms.
 # Should there be an odd or even number of samples? we want to start and end with zeros, or at least some number.
@@ -66,6 +67,13 @@ for i in range(length):
     print(f"({i},\t{sine_wave_data[i]},\t{square_wave_data[i]},\t{triangle_wave_data[i]},\t{sawtooth_up_wave_data[i]},\t{sawtooth_down_wave_data[i]})")
 
 
+def showI2Cbus():
+    i2c = board.I2C()
+    if i2c.try_lock():
+        print(f"I2C: {[hex(x) for x in i2c.scan()]}")
+    i2c.unlock()
+
+
 def init_hardware():
     """Initialize various hardware items.
     Namely, the I2C bus, Time of Flight sensor, gesture sensor, rotary encoder, OLED display.
@@ -80,18 +88,50 @@ def init_hardware():
     i2c = board.STEMMA_I2C()
 
     # For fun
-    i2c.try_lock()
-    print(f"I2C scan: {[hex(x) for x in i2c.scan()]}")
-    i2c.unlock()
+    showI2Cbus()
+
 
     # ----------------- VL53L0X time-of-flight sensor 
-    # reset the ToF sensor - take its XSHUT pin low, then high
-    print("Resetting VL53L0X...")
-    xshut = feather_digitalio.DigitalInOut(VL53L0X_RESET_OUT)
-    xshut.direction = feather_digitalio.Direction.OUTPUT
-    xshut.value = 0
-    time.sleep(0.1) # needed?
-    xshut.value = 1
+    
+    # Turn off the ToF sensor - take XSHUT pin low
+    print("Turning off VL53L0X...")
+    L0X_reset = feather_digitalio.DigitalInOut(L0X_RESET_OUT)
+    L0X_reset.direction = feather_digitalio.Direction.OUTPUT
+    L0X_reset.value = 0
+    # VL53L0X sensor is now turned off
+
+
+    # Now reprogram the L4CD
+
+    L4CD = adafruit_vl53l4cd.VL53L4CD(i2c, address=0x31)
+    # L4CD.set_address(0x31)  # address assigned should NOT be already in use
+
+    # L4CD = adafruit_vl53l4cd.VL53L4CD(i2c)
+    # L4CD.set_address(0x31)  # address assigned should NOT be already in use
+
+
+    # OPTIONAL: can set non-default values
+    L4CD.inter_measurement = 0
+    L4CD.timing_budget = 100 # must be low enough for ou
+
+    print("--------------------")
+    print("VL53L4CD:")
+    model_id, module_type = L4CD.model_info
+    print(f"    Model ID: 0x{model_id:0X}")
+    print(f"    Module Type: 0x{module_type:0X}")
+    print(f"    Timing Budget: {L4CD.timing_budget}")
+    print(f"    Inter-Measurement: {L4CD.inter_measurement}")
+    print("--------------------")
+
+    L4CD.start_ranging()
+
+
+    # Turn L0X back on and instantiate its object
+    L0X_reset.value = 1
+    L0X = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
+
+    showI2Cbus()
+
 
     tof = adafruit_vl53l0x.VL53L0X(i2c)
     print("ToF init OK")
@@ -104,21 +144,11 @@ def init_hardware():
     apds.rotation = 180
 
 
-    # ----------------- Rotary encoder
-    ss = seesaw.Seesaw(i2c, addr=0x36)
-    rotEnc = rotaryio.IncrementalEncoder(ss)
-
-    # why bother with all this?
-    # seesaw_product = (ss.get_version() >> 16) & 0xFFFF
-    # print(f"Found Seesaw product {seesaw_product}")
-    # if seesaw_product != 4991:
-    #     print("Wrong firmware loaded? Expected 4991")
-
 
     # ----------------- OLED display
     oledDisp = feathereminDisplay.FeathereminDisplay()
 
-    return tof, apds, rotEnc, oledDisp
+    return L0X, L4CD, apds, oledDisp
 
 
 # map distance in millimeters to a sample rate in Hz
@@ -140,7 +170,7 @@ def rangeToRate(mm: int) -> float:
     return sr
 
 
-tof, gesture, wheel, display = init_hardware()
+tof_L0X, tof_L4CD, gesture, display = init_hardware()
  
 dac = audiopwmio.PWMAudioOut(AUDIO_OUT_PIN)
 
@@ -166,14 +196,6 @@ print(f"Wave #{waveIndex}: {waveName}")
 display.setTextArea1(f"Waveform: {waveName}")
 
 while True:
-
-    wheelPosition = wheel.position
-    if wheelPosition != wheelPositionLast:
-        wheelPositionLast = wheelPosition
-        print(f"Position: {wheelPosition}")
-        chunkSleep = 0.1 + wheelPosition/100
-        if chunkSleep < 0:
-            chunkSleep = 0
 
     g = gesture.gesture()
     if g == 1:
@@ -206,7 +228,7 @@ while True:
         chunkSleep += 0.01
         display.setTextArea2(f"Sleep: {chunkSleep:.2f}")
 
-    r = tof.range
+    r = tof_L0X.range
     if r > 0 and r < 500:
 
         if chunkMode:
