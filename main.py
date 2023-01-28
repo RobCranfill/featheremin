@@ -240,7 +240,6 @@ while True:
     if tof_L4CD.data_ready:
         r2 = tof_L4CD.distance
         tof_L4CD.clear_interrupt()
-        print(f"r2: {r2}")
 
     if r1 > 0 and r1 < 500:
 
@@ -276,7 +275,11 @@ while True:
             
             dac.play(waveSample, loop=True)
 
-            time.sleep(chunkSleep)
+            dSleep = r2/100
+            print(f"dSleep: {dSleep}")
+            time.sleep(dSleep)
+
+            # time.sleep(chunkSleep)
 
             # time.sleep(bleepTime)
             # dac.stop()
