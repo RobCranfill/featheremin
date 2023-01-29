@@ -94,6 +94,8 @@ def init_hardware():
 
 
     # ----------------- VL53L0X time-of-flight sensor 
+    # We will finish setting this sensor up 
+    # *after* we turn it off an init the other ToF sensor.
     
     # Turn off the ToF sensor - take XSHUT pin low
     print("Turning off VL53L0X...")
@@ -103,8 +105,8 @@ def init_hardware():
     # VL53L0X sensor is now turned off
 
 
+# ----------------- VL53L4CD time-of-flight sensor 
     # L4CD ToF
-
     # First, see if it's there with the new address (left over from a previous run)
     try:
         L4CD = adafruit_vl53l4cd.VL53L4CD(i2c, address=L4CD_ALTERNATE_I2C_ADDR)
@@ -113,36 +115,38 @@ def init_hardware():
         print(f"Did not find VL53L4CD at {hex(L4CD_ALTERNATE_I2C_ADDR)}, trying default....")
 
         #TODO: catch error here if no device at all
-        L4CD = adafruit_vl53l4cd.VL53L4CD(i2c)
-        L4CD.set_address(L4CD_ALTERNATE_I2C_ADDR)  # address assigned should NOT be already in use
-        print(f"Found VL53L4CD at default address; now set to {hex(L4CD_ALTERNATE_I2C_ADDR)}")
-    finally:
+        
+        try:
+            L4CD = adafruit_vl53l4cd.VL53L4CD(i2c)
+            L4CD.set_address(L4CD_ALTERNATE_I2C_ADDR)  # address assigned should NOT be already in use
+        except:
+            print("No VL53L4CD?")
+            sys.exit(1)
 
-        # OPTIONAL: can set non-default values
-        # TODO: move this to above initial setup?
-        L4CD.inter_measurement = 0
-        L4CD.timing_budget = 100 # must be low enough for ou
+    print(f"Found VL53L4CD at default address; now set to {hex(L4CD_ALTERNATE_I2C_ADDR)}")
 
-        print("--------------------")
-        print("VL53L4CD:")
-        model_id, module_type = L4CD.model_info
-        print(f"    Model ID: 0x{model_id:0X}")
-        print(f"    Module Type: 0x{module_type:0X}")
-        print(f"    Timing Budget: {L4CD.timing_budget}")
-        print(f"    Inter-Measurement: {L4CD.inter_measurement}")
-        print("--------------------")
+    # set non-default values - what?
+    L4CD.inter_measurement = 0
+    L4CD.timing_budget = 100 # must be low enough for ou
 
-        L4CD.start_ranging()
-        print("VL53L4CD init OK")
+    print("--------------------")
+    print("VL53L4CD:")
+    model_id, module_type = L4CD.model_info
+    print(f"    Model ID: 0x{model_id:0X}")
+    print(f"    Module Type: 0x{module_type:0X}")
+    print(f"    Timing Budget: {L4CD.timing_budget}")
+    print(f"    Inter-Measurement: {L4CD.inter_measurement}")
+    print("--------------------")
 
+    L4CD.start_ranging()
+    print("VL53L4CD init OK")
 
-
+    # ----------------- VL53L0X time-of-flight sensor, part 2
     # Turn L0X back on and instantiate its object
     print("Turning VL53L0X back on...")
     L0X_reset.value = 1
     L0X = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
 
-    showI2Cbus()
 
     tof = adafruit_vl53l0x.VL53L0X(i2c)
     print("VL53L0X init OK")
@@ -155,10 +159,11 @@ def init_hardware():
     apds.rotation = 180
 
 
-
     # ----------------- OLED display
     oledDisp = feathereminDisplay.FeathereminDisplay()
 
+
+    # showI2Cbus()
     return L0X, L4CD, apds, oledDisp
 
 
@@ -182,7 +187,8 @@ def rangeToRate(mm: int) -> float:
 
 
 tof_L0X, tof_L4CD, gesture, display = init_hardware()
- 
+
+# TODO: use or set quiescent_value ???
 dac = audiopwmio.PWMAudioOut(AUDIO_OUT_PIN)
 
 sleepTime = 0.2
@@ -196,8 +202,9 @@ useSineWave = True
 wheelPositionLast = None
 
 chunkMode = False
-chunkSleep = 0.1
-display.setTextArea2(f"Sleep: {chunkSleep:.2f}")
+# chunkSleep = 0.1
+# display.setTextArea2(f"Sleep: {chunkSleep:.2f}")
+display.setTextArea2(f"Sleep: {0:.2f}")
 
 waveIndex = 0
 waveName  = waves[waveIndex][0]
@@ -225,16 +232,16 @@ while True:
         waveTable = waves[waveIndex][1]
         print(f"Wave #{waveIndex}: {waves[waveIndex][0]}")
         display.setTextArea1(f"Waveform: {waveName}")
-    elif g == 3:
-        print("left")
-        chunkSleep -= 0.01
-        if chunkSleep < 0:
-            chunkSleep = 0
-        display.setTextArea2(f"Sleep: {chunkSleep:.2f}")
-    elif g == 4:
-        print("right")
-        chunkSleep += 0.01
-        display.setTextArea2(f"Sleep: {chunkSleep:.2f}")
+    # elif g == 3:
+    #     print("left")
+    #     chunkSleep -= 0.01
+    #     if chunkSleep < 0:
+    #         chunkSleep = 0
+    #     display.setTextArea2(f"Sleep: {chunkSleep:.2f}")
+    # elif g == 4:
+    #     print("right")
+    #     chunkSleep += 0.01
+    #     display.setTextArea2(f"Sleep: {chunkSleep:.2f}")
 
     r1 = tof_L0X.range
     if tof_L4CD.data_ready:
@@ -269,15 +276,19 @@ while True:
 
             # dac.stop()
 
-            print(f"Cont: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz {chunkSleep} ")
+
+            dSleep = r2/1000
+            print(f"dSleep: {dSleep}")
+            time.sleep(dSleep)
+            display.setTextArea2(f"Sleep: {dSleep:.2f}")
+
+
+            print(f"Cont: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz {dSleep} ")
 
             waveSample = audiocore.RawSample(waveTable, sample_rate=sampleRate)
             
             dac.play(waveSample, loop=True)
 
-            dSleep = r2/100
-            print(f"dSleep: {dSleep}")
-            time.sleep(dSleep)
 
             # time.sleep(chunkSleep)
 
