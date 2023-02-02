@@ -28,6 +28,7 @@ class FeathereminDisplay:
     splash_ = None
     text_area_1_ = None
     text_area_2_ = None
+    text_area_3_ = None
 
     def __init__(self) -> None:
 
@@ -53,6 +54,12 @@ class FeathereminDisplay:
                         scale=1, color=0xFFFFFF, x=self.BORDER, y=2*self.LINE_HEIGHT)
         self.splash_.append(self.text_area_2_)
         
+        self.text_area_3_ = label.Label(terminalio.FONT, text="", 
+                        scale=1, color=0xFFFFFF, x=self.BORDER, y=3*self.LINE_HEIGHT)
+        self.splash_.append(self.text_area_3_)
+        
+
+
         ## for this to work we need to expose an update() method?
         #
         # text = "Hello world CircuitPython scrolling label"
@@ -70,3 +77,6 @@ class FeathereminDisplay:
 
     def setTextArea2(self, pText):
         self.text_area_2_.text = pText
+
+    def setTextArea3(self, pText):
+        self.text_area_3_.text = pText

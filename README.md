@@ -1,12 +1,14 @@
 # featheramin
 A Feather-based theramin!
 
-This project may or may not become a useful thing. I'm just having fun playing around with the Feather and its various add-ons!
+This project may or may not become a useful thing. 
+I'm just having fun playing around with the Feather and its various add-ons.
 
 ## Hardware
 So far, (almost) all from Adafruit!
- * Feather RP2040 microcontroller
- * VL53L0X time-of-flight proximity sensor
+ * Feather RP2040 microcontroller (Adafruit product ID 4884)
+ * VL53L0X Time-of-Flight distance sensor (product ID 3317)
+ * VL53L4CD Time-of-Flight distance sensor (product ID 5396)
  * APDS-9960 proximity/gesture sensor
  * 1 watt "Stemma" audio amplifier and speaker
  *  and/or 20 watt audio amp with external speaker

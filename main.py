@@ -202,6 +202,8 @@ useSineWave = True
 wheelPositionLast = None
 
 chunkMode = False
+display.setTextArea3(f"chunkMode: {chunkMode}")
+
 # chunkSleep = 0.1
 # display.setTextArea2(f"Sleep: {chunkSleep:.2f}")
 display.setTextArea2(f"Sleep: {0:.2f}")
@@ -232,16 +234,14 @@ while True:
         waveTable = waves[waveIndex][1]
         print(f"Wave #{waveIndex}: {waves[waveIndex][0]}")
         display.setTextArea1(f"Waveform: {waveName}")
-    # elif g == 3:
-    #     print("left")
-    #     chunkSleep -= 0.01
-    #     if chunkSleep < 0:
-    #         chunkSleep = 0
-    #     display.setTextArea2(f"Sleep: {chunkSleep:.2f}")
-    # elif g == 4:
-    #     print("right")
-    #     chunkSleep += 0.01
-    #     display.setTextArea2(f"Sleep: {chunkSleep:.2f}")
+    elif g == 3:
+        chunkMode = False
+        print("left: chunkMode off")
+        display.setTextArea3(f"chunkMode: {chunkMode}")
+    elif g == 4:
+        chunkMode = True
+        print("right: chunkMode on")
+        display.setTextArea3(f"chunkMode: {chunkMode}")
 
     r1 = tof_L0X.range
     if tof_L4CD.data_ready:
