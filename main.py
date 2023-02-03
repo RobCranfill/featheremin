@@ -37,37 +37,39 @@ def makeWaveTables():
     # TODO: Should there be an odd or even number of samples? we want to start and end with zeros, or at least some number.
     #
     length = 8000 // 440 + 1
-    length = 16000 // 440 + 1
 
-    sine_wave_data = array.array("H", [0] * length)
-    square_wave_data = array.array("H", [0] * length)
-    triangle_wave_data = array.array("H", [0] * length)
-    sawtooth_up_wave_data = array.array("H", [0] * length)
-    sawtooth_down_wave_data = array.array("H", [0] * length)
+    # this results in a fainter sound! why???
+    # length = 16000 // 440 + 1
+
+    sine_data = array.array("H", [0] * length)
+    square_data = array.array("H", [0] * length)
+    triangle_data = array.array("H", [0] * length)
+    sawtooth_up_data = array.array("H", [0] * length)
+    sawtooth_down_data = array.array("H", [0] * length)
 
     for i in range(length):
-        sine_wave_data[i] = int(math.sin(math.pi * 2 * i / length) * (2 ** 15) + 2 ** 15)
+        sine_data[i] = int(math.sin(math.pi * 2 * i / length) * (2 ** 15) + 2 ** 15)
         if i < length/2:
-            square_wave_data[i] = 0
-            triangle_wave_data[i] = 2 * int(2**16 * i/length)
+            square_data[i] = 0
+            triangle_data[i] = 2 * int(2**16 * i/length)
         else:
-            square_wave_data[i] = int(2 ** 16)-1
-            triangle_wave_data[i] = triangle_wave_data[length-i-1]
-        sawtooth_up_wave_data[i] = int(i*2**16/length)
-        sawtooth_down_wave_data[i] = 2**16 - sawtooth_up_wave_data[i] - 1
+            square_data[i] = int(2 ** 16)-1
+            triangle_data[i] = triangle_data[length-i-1]
+        sawtooth_up_data[i] = int(i*2**16/length)
+        sawtooth_down_data[i] = 2**16 - sawtooth_up_data[i] - 1
 
-
+    # This is the nice dictionary we return:
     wave_tables = [
-        ("sine", sine_wave_data), 
-        ("square", square_wave_data), 
-        ("triangle", triangle_wave_data),
-        ("saw up", sawtooth_up_wave_data),
-        ("saw down", sawtooth_down_wave_data)]
+        ("sine", sine_data), 
+        ("square", square_data), 
+        ("triangle", triangle_data),
+        ("saw up", sawtooth_up_data),
+        ("saw down", sawtooth_down_data)]
 
-    print(f"Wave tables: {length} entries")
+    print(f"\nWave tables: {length} entries")
     print(f"{[w[0] for w in wave_tables]}")
     for i in range(length):
-        print(f"({i},\t{sine_wave_data[i]},\t{square_wave_data[i]},\t{triangle_wave_data[i]},\t{sawtooth_up_wave_data[i]},\t{sawtooth_down_wave_data[i]})")
+        print(f"({i},\t{sine_data[i]},\t{square_data[i]},\t{triangle_data[i]},\t{sawtooth_up_data[i]},\t{sawtooth_down_data[i]})")
 
     return wave_tables
 
@@ -162,8 +164,10 @@ def init_hardware():
     # ----------------- OLED display
     oledDisp = feathereminDisplay.FeathereminDisplay()
 
-
+    # Show it again? nah.
     # showI2Cbus()
+
+    print("init_hardware OK!")
     return L0X, L4CD, apds, oledDisp
 
 
@@ -189,7 +193,6 @@ wave_tables = makeWaveTables()
 dac = audiopwmio.PWMAudioOut(AUDIO_OUT_PIN)
 
 sleepTime = 0.2
-bleepTime = 0.2
 
 nTries = 100
 iter = 1
@@ -284,10 +287,6 @@ while True:
             
             dac.play(waveSample, loop=True)
 
-
-            # time.sleep(chunkSleep)
-
-            # time.sleep(bleepTime)
             # dac.stop()
             
     else:
