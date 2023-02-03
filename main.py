@@ -31,42 +31,46 @@ L4CD_ALTERNATE_I2C_ADDR = 0x31
 
 ONE_OCTAVE = [440.00, 466.16, 493.88, 523.25, 554.37, 587.33, 622.25, 659.25, 698.46, 739.99, 83.99, 830.61]
 
-print("Hello, fetheremin!")
 
-# Generate one period of various waveforms.
-# TODO: Should there be an odd or even number of samples? we want to start and end with zeros, or at least some number.
-#
-length = 8000 // 440 + 1
+def makeWaveTables():
+    # Generate one period of various waveforms.
+    # TODO: Should there be an odd or even number of samples? we want to start and end with zeros, or at least some number.
+    #
+    length = 8000 // 440 + 1
 
-sine_wave_data = array.array("H", [0] * length)
-square_wave_data = array.array("H", [0] * length)
-triangle_wave_data = array.array("H", [0] * length)
-sawtooth_up_wave_data = array.array("H", [0] * length)
-sawtooth_down_wave_data = array.array("H", [0] * length)
+    sine_wave_data = array.array("H", [0] * length)
+    square_wave_data = array.array("H", [0] * length)
+    triangle_wave_data = array.array("H", [0] * length)
+    sawtooth_up_wave_data = array.array("H", [0] * length)
+    sawtooth_down_wave_data = array.array("H", [0] * length)
 
-waves = [
-    ("sine", sine_wave_data), 
-    ("square", square_wave_data), 
-    ("triangle", triangle_wave_data),
-    ("saw up", sawtooth_up_wave_data),
-    ("saw down", sawtooth_down_wave_data)]
+    for i in range(length):
+        sine_wave_data[i] = int(math.sin(math.pi * 2 * i / length) * (2 ** 15) + 2 ** 15)
+        if i < length/2:
+            square_wave_data[i] = 0
+            triangle_wave_data[i] = 2 * int(2**16 * i/length)
+        else:
+            square_wave_data[i] = int(2 ** 16)-1
+            triangle_wave_data[i] = triangle_wave_data[length-i-1]
+        sawtooth_up_wave_data[i] = int(i*2**16/length)
+        sawtooth_down_wave_data[i] = 2**16 - sawtooth_up_wave_data[i] - 1
 
 
-for i in range(length):
-    sine_wave_data[i] = int(math.sin(math.pi * 2 * i / length) * (2 ** 15) + 2 ** 15)
-    if i < length/2:
-        square_wave_data[i] = 0
-        triangle_wave_data[i] = 2 * int(2**16 * i/length)
-    else:
-        square_wave_data[i] = int(2 ** 16)-1
-        triangle_wave_data[i] = triangle_wave_data[length-i-1]
-    sawtooth_up_wave_data[i] = int(i*2**16/length)
-    sawtooth_down_wave_data[i] = 2**16 - sawtooth_up_wave_data[i] - 1
+    wave_tables = [
+        ("sine", sine_wave_data), 
+        ("square", square_wave_data), 
+        ("triangle", triangle_wave_data),
+        ("saw up", sawtooth_up_wave_data),
+        ("saw down", sawtooth_down_wave_data)]
 
-print(f"Wave tables: {length} entries")
-print(f"{[w[0] for w in waves]}")
-for i in range(length):
-    print(f"({i},\t{sine_wave_data[i]},\t{square_wave_data[i]},\t{triangle_wave_data[i]},\t{sawtooth_up_wave_data[i]},\t{sawtooth_down_wave_data[i]})")
+    print(f"Wave tables: {length} entries")
+    print(f"{[w[0] for w in wave_tables]}")
+    for i in range(length):
+        print(f"({i},\t{sine_wave_data[i]},\t{square_wave_data[i]},\t{triangle_wave_data[i]},\t{sawtooth_up_wave_data[i]},\t{sawtooth_down_wave_data[i]})")
+
+    return wave_tables
+
+    # end makeWaveTables()
 
 
 def showI2Cbus():
@@ -170,7 +174,7 @@ def init_hardware():
 # map distance in millimeters to a sample rate in Hz
 # mm in range (0,500)
 #
-def rangeToRate(mm: int) -> float:
+def rangeToNote(mm: int) -> float:
 
     # simple, no chunking:
     if False:
@@ -186,7 +190,14 @@ def rangeToRate(mm: int) -> float:
     return sr
 
 
+# ------------------- begin main -------------------
+
+print("Hello, fetheremin!")
+
 tof_L0X, tof_L4CD, gesture, display = init_hardware()
+
+wave_tables = makeWaveTables()
+
 
 # TODO: use or set quiescent_value ???
 dac = audiopwmio.PWMAudioOut(AUDIO_OUT_PIN)
@@ -201,16 +212,16 @@ sampleRateLast = -1
 useSineWave = True
 wheelPositionLast = None
 
-chunkMode = False
-display.setTextArea3(f"chunkMode: {chunkMode}")
+chromatic = False
+display.setTextArea3(f"Chromatic: {chromatic}")
 
 # chunkSleep = 0.1
 # display.setTextArea2(f"Sleep: {chunkSleep:.2f}")
 display.setTextArea2(f"Sleep: {0:.2f}")
 
 waveIndex = 0
-waveName  = waves[waveIndex][0]
-waveTable = waves[waveIndex][1]
+waveName  = wave_tables[waveIndex][0]
+waveTable = wave_tables[waveIndex][1]
 
 print(f"Wave #{waveIndex}: {waveName}")
 display.setTextArea1(f"Waveform: {waveName}")
@@ -220,28 +231,28 @@ while True:
     g = gesture.gesture()
     if g == 1:
         waveIndex += 1
-        if waveIndex >= len(waves):
+        if waveIndex >= len(wave_tables):
             waveIndex = 0
-        waveName  = waves[waveIndex][0]
-        waveTable = waves[waveIndex][1]
-        print(f"Wave #{waveIndex}: {waves[waveIndex][0]}")
+        waveName  = wave_tables[waveIndex][0]
+        waveTable = wave_tables[waveIndex][1]
+        print(f"Wave #{waveIndex}: {wave_tables[waveIndex][0]}")
         display.setTextArea1(f"Waveform: {waveName}")
     elif g == 2:
         waveIndex -= 1
         if waveIndex < 0:
-            waveIndex = len(waves) - 1
-        waveName  = waves[waveIndex][0]
-        waveTable = waves[waveIndex][1]
-        print(f"Wave #{waveIndex}: {waves[waveIndex][0]}")
+            waveIndex = len(wave_tables) - 1
+        waveName  = wave_tables[waveIndex][0]
+        waveTable = wave_tables[waveIndex][1]
+        print(f"Wave #{waveIndex}: {wave_tables[waveIndex][0]}")
         display.setTextArea1(f"Waveform: {waveName}")
     elif g == 3:
-        chunkMode = False
-        print("left: chunkMode off")
-        display.setTextArea3(f"chunkMode: {chunkMode}")
+        chromatic = False
+        print("left: chromatic off")
+        display.setTextArea3(f"Chromatic: {chromatic}")
     elif g == 4:
-        chunkMode = True
-        print("right: chunkMode on")
-        display.setTextArea3(f"chunkMode: {chunkMode}")
+        chromatic = True
+        print("right: chromatic on")
+        display.setTextArea3(f"Chromatic: {chromatic}")
 
     r1 = tof_L0X.range
     if tof_L4CD.data_ready:
@@ -250,14 +261,11 @@ while True:
 
     if r1 > 0 and r1 < 500:
 
-        if chunkMode:
-            sampleRate = int(rangeToRate(r1))
+        if chromatic:
+            sampleRate = int(rangeToNote(r1))
             if sampleRate != sampleRateLast:
 
                 dac.stop()
-
-                # sampleRate = int(30*(500-r) + 1000)
-                # sampleRate = int(30*r + 1000)
 
                 print(f"#{iter}: {r1} mm -> {sampleRate} Hz {'sine' if useSineWave else 'square'}")
 
@@ -266,8 +274,6 @@ while True:
                 sampleRateLast = sampleRate
                 dac.play(waveSample, loop=True)
                 time.sleep(0.1)
-            # time.sleep(bleepTime)
-            # dac.stop()
 
         else: # "continuous", not chunkMode
             
