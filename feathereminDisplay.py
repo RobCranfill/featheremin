@@ -2,7 +2,12 @@
 #
 # SPDX-License-Identifier: Unlicense
 """
-Original Author: Mark Roberts (mdroberts1243) from Adafruit code
+Display object for
+    Adafruit FeatherWing OLED - 128x64 OLED Add-on For Feather - STEMMA QT / Qwiic
+    AdafruitProduct ID: 4650
+and using the Adafruit CircuitPython DisplayIO SH1107 module.
+
+Adapted from code by: Mark Roberts (mdroberts1243) from Adafruit code
 """
 
 import board
@@ -59,8 +64,7 @@ class FeathereminDisplay:
         self.splash_.append(self.text_area_3_)
         
 
-
-        ## for this to work we need to expose an update() method?
+        ## for this sort of thing to work we would need to expose an update() method?
         #
         # text = "Hello world CircuitPython scrolling label"
         # my_scrolling_label = ScrollingLabel(
