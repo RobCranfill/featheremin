@@ -24,7 +24,7 @@ So far this code is written in CircuitPython, but I may eventually want/need to 
 
 I have been using Visual Studio Code for my IDE but I don't think that matters.
 
-Note: The main code is in a file called "main.py", to avoid the irritating warnings VCCode throws when the usual name, "code.py", is used.
+Note: The main code is in a file called "main.py", to avoid the irritating warnings VSCode throws when the usual name, "code.py", is used.
 
 
 ## Things to Do

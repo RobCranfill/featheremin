@@ -37,6 +37,7 @@ def makeWaveTables():
     # TODO: Should there be an odd or even number of samples? we want to start and end with zeros, or at least some number.
     #
     length = 8000 // 440 + 1
+    length = 16000 // 440 + 1
 
     sine_wave_data = array.array("H", [0] * length)
     square_wave_data = array.array("H", [0] * length)
@@ -76,7 +77,7 @@ def makeWaveTables():
 def showI2Cbus():
     i2c = board.I2C()
     if i2c.try_lock():
-        print(f"I2C: {[hex(x) for x in i2c.scan()]}")
+        print(f"I2C addresses found: {[hex(x) for x in i2c.scan()]}")
     i2c.unlock()
 
 
@@ -111,36 +112,34 @@ def init_hardware():
 
 # ----------------- VL53L4CD time-of-flight sensor 
     # L4CD ToF
-    # First, see if it's there with the new address (left over from a previous run)
+    # First, see if it's there with the new address (left over from a previous run).
+    # If so, we don't need to re-assign it.
     try:
         L4CD = adafruit_vl53l4cd.VL53L4CD(i2c, address=L4CD_ALTERNATE_I2C_ADDR)
-        print(f"Found VL53L4CD at {hex(L4CD_ALTERNATE_I2C_ADDR)}")
+        print(f"Found VL53L4CD at {hex(L4CD_ALTERNATE_I2C_ADDR)}; OK")
     except:
         print(f"Did not find VL53L4CD at {hex(L4CD_ALTERNATE_I2C_ADDR)}, trying default....")
-
-        #TODO: catch error here if no device at all
-        
         try:
             L4CD = adafruit_vl53l4cd.VL53L4CD(i2c)
+            print(f"Found VL53L4CD at default address; now set to {hex(L4CD_ALTERNATE_I2C_ADDR)}")
             L4CD.set_address(L4CD_ALTERNATE_I2C_ADDR)  # address assigned should NOT be already in use
         except:
             print("No VL53L4CD?")
             sys.exit(1)
 
-    print(f"Found VL53L4CD at default address; now set to {hex(L4CD_ALTERNATE_I2C_ADDR)}")
 
     # set non-default values - what?
     L4CD.inter_measurement = 0
-    L4CD.timing_budget = 100 # must be low enough for ou
+    L4CD.timing_budget = 100
 
-    print("--------------------")
-    print("VL53L4CD:")
-    model_id, module_type = L4CD.model_info
-    print(f"    Model ID: 0x{model_id:0X}")
-    print(f"    Module Type: 0x{module_type:0X}")
-    print(f"    Timing Budget: {L4CD.timing_budget}")
-    print(f"    Inter-Measurement: {L4CD.inter_measurement}")
-    print("--------------------")
+    # print("--------------------")
+    # print("VL53L4CD:")
+    # model_id, module_type = L4CD.model_info
+    # print(f"    Model ID: 0x{model_id:0X}")
+    # print(f"    Module Type: 0x{module_type:0X}")
+    # print(f"    Timing Budget: {L4CD.timing_budget}")
+    # print(f"    Inter-Measurement: {L4CD.inter_measurement}")
+    # print("--------------------")
 
     L4CD.start_ranging()
     print("VL53L4CD init OK")
@@ -150,9 +149,6 @@ def init_hardware():
     print("Turning VL53L0X back on...")
     L0X_reset.value = 1
     L0X = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
-
-
-    tof = adafruit_vl53l0x.VL53L0X(i2c)
     print("VL53L0X init OK")
 
 
@@ -171,28 +167,18 @@ def init_hardware():
     return L0X, L4CD, apds, oledDisp
 
 
-# map distance in millimeters to a sample rate in Hz
-# mm in range (0,500)
+# Map the distance in millimeters to a sample rate in Hz
 #
 def rangeToNote(mm: int) -> float:
 
-    # simple, no chunking:
-    if False:
-        sr = int(30*mm + 1000)
-
-    # 10 chunks - ok
-    if False:
-        sr = mm // 50  # sr = {0..10}
-        sr = sr * 1000 # sr = {0K..10K}
-
     sr = ONE_OCTAVE[mm // 50] * (8000 // 440)
-    
     return sr
 
 
+# --------------------------------------------------
 # ------------------- begin main -------------------
 
-print("Hello, fetheremin!")
+print("\nHello, fetheremin!")
 
 tof_L0X, tof_L4CD, gesture, display = init_hardware()
 
@@ -254,6 +240,9 @@ while True:
         print("right: chromatic on")
         display.setTextArea3(f"Chromatic: {chromatic}")
 
+    # Get the two ranges, if available. 
+    # (Why is one always available, but the other is not?)
+    #
     r1 = tof_L0X.range
     if tof_L4CD.data_ready:
         r2 = tof_L4CD.distance
@@ -273,23 +262,23 @@ while True:
 
                 sampleRateLast = sampleRate
                 dac.play(waveSample, loop=True)
-                time.sleep(0.1)
 
-        else: # "continuous", not chunkMode
+                dSleep = r2/1000
+                display.setTextArea2(f"Sleep: {dSleep:.2f}")
+                time.sleep(dSleep)
+
+        else: # "continuous", not chromatic; more "theremin-like"?
             
             # sampleRate = int(rangeToRate(r))
             sampleRate = int(30*r1 + 1000)
 
             # dac.stop()
 
-
             dSleep = r2/1000
-            print(f"dSleep: {dSleep}")
-            time.sleep(dSleep)
             display.setTextArea2(f"Sleep: {dSleep:.2f}")
+            time.sleep(dSleep)
 
-
-            print(f"Cont: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz {dSleep} ")
+            print(f"Cont: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz; sleep {dSleep} ")
 
             waveSample = audiocore.RawSample(waveTable, sample_rate=sampleRate)
             
