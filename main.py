@@ -249,6 +249,9 @@ while True:
     r1 = tof_L0X.range
     if tof_L4CD.data_ready:
         r2 = tof_L4CD.distance
+        if r2 > 50:
+            r2 = 0
+        # print(f"r2 = {r2}")
         tof_L4CD.clear_interrupt()
 
     if r1 > 0 and r1 < 500:
@@ -266,7 +269,7 @@ while True:
                 sampleRateLast = sampleRate
                 dac.play(waveSample, loop=True)
 
-                dSleep = r2/1000
+                dSleep = r2/100
                 display.setTextArea2(f"Sleep: {dSleep:.2f}")
                 time.sleep(dSleep)
 
@@ -277,7 +280,7 @@ while True:
 
             # dac.stop()
 
-            dSleep = r2/1000
+            dSleep = r2/100
             display.setTextArea2(f"Sleep: {dSleep:.2f}")
             time.sleep(dSleep)
 

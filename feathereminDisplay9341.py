@@ -2,9 +2,10 @@
 # SPDX-License-Identifier: MIT
 
 """
-This test will initialize the display using displayio and draw a solid green
-background, a smaller purple rectangle, and some yellow text. All drawing is done
-using native displayio modules.
+Display object for
+    Adafruit 2.2" TFT Display - 2.2" 18-bit color TFT LCD display
+    AdafruitProduct ID: 1480
+and using the Adafruit CircuitPython DisplayIO ILI9341 or compatible module.
 
 Pinouts are for the 2.4" TFT FeatherWing or Breakout with a Feather M4 or M0.
 """
