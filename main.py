@@ -12,7 +12,7 @@ import math
 import time
 import sys
 
-import feathereminDisplay
+import feathereminDisplay9341
 
 import adafruit_vl53l0x
 import adafruit_vl53l4cd
@@ -24,8 +24,8 @@ from adafruit_apds9960.apds9960 import APDS9960
 from adafruit_seesaw import seesaw, rotaryio, digitalio
 
 # GPIO pins used:
-L0X_RESET_OUT = board.A0
-AUDIO_OUT_PIN = board.A1
+L0X_RESET_OUT = board.D4
+AUDIO_OUT_PIN = board.D5
 
 L4CD_ALTERNATE_I2C_ADDR = 0x31
 
@@ -162,7 +162,7 @@ def init_hardware():
 
 
     # ----------------- OLED display
-    oledDisp = feathereminDisplay.FeathereminDisplay()
+    oledDisp = feathereminDisplay9341.FeathereminDisplay9341()
 
     # Show it again? nah.
     # showI2Cbus()
