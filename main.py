@@ -17,6 +17,8 @@ import feathereminDisplay9341
 import adafruit_vl53l0x
 import adafruit_vl53l4cd
 
+import adafruit_max9744
+
 # https://learn.adafruit.com/adafruit-apds9960-breakout/circuitpython
 from adafruit_apds9960.apds9960 import APDS9960
 
@@ -66,10 +68,13 @@ def makeWaveTables():
         ("saw up", sawtooth_up_data),
         ("saw down", sawtooth_down_data)]
 
-    print(f"\nWave tables: {length} entries")
+    print(f"\nWave tables: {length} entries:")
     print(f"{[w[0] for w in wave_tables]}")
     for i in range(length):
-        print(f"({i},\t{sine_data[i]},\t{square_data[i]},\t{triangle_data[i]},\t{sawtooth_up_data[i]},\t{sawtooth_down_data[i]})")
+        print(
+            f"({i}," +
+            f"\t{sine_data[i]:5},\t{square_data[i]:5},\t{triangle_data[i]:5}," +
+            f"\t{sawtooth_up_data[i]:5},\t{sawtooth_down_data[i]:5})")
 
     return wave_tables
 
@@ -85,7 +90,7 @@ def showI2Cbus():
 
 def init_hardware():
     """Initialize various hardware items.
-    Namely, the I2C bus, Time of Flight sensors, gesture sensor, and display.
+    Namely, the I2C bus, Time of Flight sensors, gesture sensor, display, and amp (if attached).
 
     None of this checks for errors (missing hardware) yet - it will just malf.
 
@@ -167,8 +172,16 @@ def init_hardware():
     # Show it again? nah.
     # showI2Cbus()
 
+    # ------------------ MAX9744 amp, if any
+    amp = None
+    try:
+        amp = adafruit_max9744.MAX9744(i2c)
+        amp.volume = 25 # OK for small 4 ohm, 3W speaker
+    except:
+        print("**** No MAX9744 found; continuing....")
+
     print("init_hardware OK!")
-    return L0X, L4CD, apds, oledDisp
+    return L0X, L4CD, apds, oledDisp, amp
 
 
 # Map the distance in millimeters to a sample rate in Hz
@@ -184,7 +197,8 @@ def rangeToNote(mm: int) -> float:
 
 print("\nHello, fetheremin!")
 
-tof_L0X, tof_L4CD, gesture, display = init_hardware()
+tof_L0X, tof_L4CD, gesture, display, amp = init_hardware()
+
 
 wave_tables = makeWaveTables()
 
