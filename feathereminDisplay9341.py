@@ -49,36 +49,46 @@ class FeathereminDisplay9341:
         splash = displayio.Group()
         display.show(splash)
 
-        # Draw a green background
+        # Main background
         color_bitmap = displayio.Bitmap(320, 240, 1)
         color_palette = displayio.Palette(1)
-        color_palette[0] = 0x00FF00  # Green
+        color_palette[0] = 0x0000FF  # blue
 
         bg_sprite = displayio.TileGrid(color_bitmap, pixel_shader=color_palette, x=0, y=0)
 
         splash.append(bg_sprite)
 
-        # Draw a smaller inner rectangle
-        inner_bitmap = displayio.Bitmap(280, 200, 1)
-        inner_palette = displayio.Palette(1)
-        inner_palette[0] = 0xAA0088  # Purple
-        inner_palette[0] = 0x0000FF  # no, blue!
-        inner_sprite = displayio.TileGrid(inner_bitmap, pixel_shader=inner_palette, x=20, y=20)
-        splash.append(inner_sprite)
+        # Left control display
+        l_bitmap = displayio.Bitmap(140, 80, 1)
+        l_palette = displayio.Palette(1)
+        l_palette[0] = 0x00FF00  #green
+        l_sprite = displayio.TileGrid(l_bitmap, pixel_shader=l_palette, x=10, y=140)
+        splash.append(l_sprite)
 
+        # Right control display
+        r_bitmap = displayio.Bitmap(140, 80, 1)
+        r_palette = displayio.Palette(1)
+        r_palette[0] = 0x00FF00  #green
+        r_sprite = displayio.TileGrid(r_bitmap, pixel_shader=r_palette, x=170, y=140)
+        splash.append(r_sprite)
 
-        # Draw a label
-        text_group = displayio.Group(scale=2, x=40, y=40)
+        # Labels
+        text_group = displayio.Group(scale=2, x=0, y=40)
 
-        self.text_area_1_ = label.Label(terminalio.FONT, text="text_area_1_", color=0xFFFF00)
+        self.text_area_1_ = label.Label(terminalio.FONT, text="text_area_1_", color=0xFFFF00, x=5, y=0)
         text_group.append(self.text_area_1_)  # Subgroup for text scaling
 
-        self.text_area_2_ = label.Label(terminalio.FONT, text="text_area_2_", color=0xFFFF00, y=10)
+        self.text_area_2_ = label.Label(terminalio.FONT, text="text_area_2_", color=0xFFFF00, x=5, y=10)
         text_group.append(self.text_area_2_)  # Subgroup for text scaling
 
-        self.text_area_3_ = label.Label(terminalio.FONT, text="text_area_3_", color=0xFFFF00, y=20)
+        self.text_area_3_ = label.Label(terminalio.FONT, text="text_area_3_", color=0xFFFF00, x=5, y=20)
         text_group.append(self.text_area_3_)  # Subgroup for text scaling
 
+        self.text_area_l_ = label.Label(terminalio.FONT, text="Control L", color=0x000000, x=10, y=60)
+        text_group.append(self.text_area_l_)  # Subgroup for text scaling
+
+        self.text_area_r_ = label.Label(terminalio.FONT, text="Control R", color=0x000000, x=90, y=60)
+        text_group.append(self.text_area_r_)  # Subgroup for text scaling
 
         splash.append(text_group)
 

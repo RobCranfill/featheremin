@@ -25,6 +25,9 @@ from adafruit_apds9960.apds9960 import APDS9960
 # https://docs.circuitpython.org/projects/seesaw/en/latest/
 from adafruit_seesaw import seesaw, rotaryio, digitalio
 
+
+TEST_WHEEL_MODE = True
+
 # GPIO pins used:
 L0X_RESET_OUT = board.D4
 AUDIO_OUT_PIN = board.D5
@@ -68,13 +71,14 @@ def makeWaveTables():
         ("saw up", sawtooth_up_data),
         ("saw down", sawtooth_down_data)]
 
-    print(f"\nWave tables: {length} entries:")
-    print(f"{[w[0] for w in wave_tables]}")
-    for i in range(length):
-        print(
-            f"({i}," +
-            f"\t{sine_data[i]:5},\t{square_data[i]:5},\t{triangle_data[i]:5}," +
-            f"\t{sawtooth_up_data[i]:5},\t{sawtooth_down_data[i]:5})")
+    if False:
+        print(f"\nWave tables: {length} entries:")
+        print(f"{[w[0] for w in wave_tables]}")
+        for i in range(length):
+            print(
+                f"({i}," +
+                f"\t{sine_data[i]:5},\t{square_data[i]:5},\t{triangle_data[i]:5}," +
+                f"\t{sawtooth_up_data[i]:5},\t{sawtooth_down_data[i]:5})")
 
     return wave_tables
 
@@ -130,47 +134,53 @@ def init_hardware():
             L4CD = adafruit_vl53l4cd.VL53L4CD(i2c)
             print(f"Found VL53L4CD at default address; now set to {hex(L4CD_ALTERNATE_I2C_ADDR)}")
             L4CD.set_address(L4CD_ALTERNATE_I2C_ADDR)  # address assigned should NOT be already in use
+
+            # # set non-default values?
+            # L4CD.inter_measurement = 0
+            # L4CD.timing_budget = 100
+
+            # print("--------------------")
+            # print("VL53L4CD:")
+            # model_id, module_type = L4CD.model_info
+            # print(f"    Model ID: 0x{model_id:0X}")
+            # print(f"    Module Type: 0x{module_type:0X}")
+            # print(f"    Timing Budget: {L4CD.timing_budget}")
+            # print(f"    Inter-Measurement: {L4CD.inter_measurement}")
+            # print("--------------------")
+
+            L4CD.start_ranging()
+            print("VL53L4CD init OK")
+
         except:
-            print("No VL53L4CD?")
-            sys.exit(1)
+            print("**** No VL53L4CD?")
+            # sys.exit(1)
+            L4CD = None
 
-
-    # set non-default values - what?
-    L4CD.inter_measurement = 0
-    L4CD.timing_budget = 100
-
-    # print("--------------------")
-    # print("VL53L4CD:")
-    # model_id, module_type = L4CD.model_info
-    # print(f"    Model ID: 0x{model_id:0X}")
-    # print(f"    Module Type: 0x{module_type:0X}")
-    # print(f"    Timing Budget: {L4CD.timing_budget}")
-    # print(f"    Inter-Measurement: {L4CD.inter_measurement}")
-    # print("--------------------")
-
-    L4CD.start_ranging()
-    print("VL53L4CD init OK")
 
     # ----------------- VL53L0X time-of-flight sensor, part 2
     # Turn L0X back on and instantiate its object
     print("Turning VL53L0X back on...")
     L0X_reset.value = 1
     L0X = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
-    print("VL53L0X init OK")
+    print(f"VL53L0X init OK ({L0X})")
 
 
-    # ----------------- APDS9960 gesture/proximity/color sensor 
-    apds = APDS9960(i2c)
-    apds.enable_proximity = True
-    apds.enable_gesture = True
-    apds.rotation = 180
-
+    # ----------------- APDS9960 gesture/proximity/color sensor
+    apds = None
+    try:
+        apds = APDS9960(i2c)
+        apds.enable_proximity = True
+        apds.enable_gesture = True
+        apds.rotation = 180
+    except:
+        print("**** No APDS9960? Continuing....")
 
     # ----------------- OLED display
     oledDisp = feathereminDisplay9341.FeathereminDisplay9341()
 
     # Show it again? nah.
     # showI2Cbus()
+
 
     # ------------------ MAX9744 amp, if any
     amp = None
@@ -180,8 +190,18 @@ def init_hardware():
     except:
         print("**** No MAX9744 found; continuing....")
 
+
+    # ------------------ Rotary encoder
+    rotaryThingy = seesaw.Seesaw(i2c, addr=0x36)
+    seesaw_product = (rotaryThingy.get_version() >> 16) & 0xFFFF
+    print("Found product {}".format(seesaw_product))
+    if seesaw_product != 4991:
+        print("Wrong firmware loaded?  Expected 4991")
+    encoder = rotaryio.IncrementalEncoder(rotaryThingy)
+
+
     print("init_hardware OK!")
-    return L0X, L4CD, apds, oledDisp, amp
+    return L0X, L4CD, apds, oledDisp, amp, encoder
 
 
 # Map the distance in millimeters to a sample rate in Hz
@@ -197,7 +217,7 @@ def rangeToNote(mm: int) -> float:
 
 print("\nHello, fetheremin!")
 
-tof_L0X, tof_L4CD, gesture, display, amp = init_hardware()
+tof_L0X, tof_L4CD, gesture, display, amp, wheel = init_hardware()
 
 
 wave_tables = makeWaveTables()
@@ -231,37 +251,46 @@ display.setTextArea1(f"Waveform: {waveName}")
 
 while True:
 
-    g = gesture.gesture()
-    if g == 1:
-        waveIndex += 1
-        if waveIndex >= len(wave_tables):
-            waveIndex = 0
-        waveName  = wave_tables[waveIndex][0]
-        waveTable = wave_tables[waveIndex][1]
-        print(f"Wave #{waveIndex}: {wave_tables[waveIndex][0]}")
-        display.setTextArea1(f"Waveform: {waveName}")
-    elif g == 2:
-        waveIndex -= 1
-        if waveIndex < 0:
-            waveIndex = len(wave_tables) - 1
-        waveName  = wave_tables[waveIndex][0]
-        waveTable = wave_tables[waveIndex][1]
-        print(f"Wave #{waveIndex}: {wave_tables[waveIndex][0]}")
-        display.setTextArea1(f"Waveform: {waveName}")
-    elif g == 3:
-        chromatic = False
-        print("left: chromatic off")
-        display.setTextArea3(f"Chromatic: {chromatic}")
-    elif g == 4:
-        chromatic = True
-        print("right: chromatic on")
-        display.setTextArea3(f"Chromatic: {chromatic}")
+    # negate the position to make clockwise rotation positive
+    position = - wheel.position
+    if position != wheelPositionLast:
+        wheelPositionLast = position
+        print(f"Wheel: {position}")
+
+
+    if gesture:
+        g = gesture.gesture()
+        if g == 1:
+            waveIndex += 1
+            if waveIndex >= len(wave_tables):
+                waveIndex = 0
+            waveName  = wave_tables[waveIndex][0]
+            waveTable = wave_tables[waveIndex][1]
+            print(f"Wave #{waveIndex}: {wave_tables[waveIndex][0]}")
+            display.setTextArea1(f"Waveform: {waveName}")
+        elif g == 2:
+            waveIndex -= 1
+            if waveIndex < 0:
+                waveIndex = len(wave_tables) - 1
+            waveName  = wave_tables[waveIndex][0]
+            waveTable = wave_tables[waveIndex][1]
+            print(f"Wave #{waveIndex}: {wave_tables[waveIndex][0]}")
+            display.setTextArea1(f"Waveform: {waveName}")
+        elif g == 3:
+            chromatic = False
+            print("left: chromatic off")
+            display.setTextArea3(f"Chromatic: {chromatic}")
+        elif g == 4:
+            chromatic = True
+            print("right: chromatic on")
+            display.setTextArea3(f"Chromatic: {chromatic}")
 
     # Get the two ranges, if available. 
     # (Why is one always available, but the other is not?)
     #
     r1 = tof_L0X.range
-    if tof_L4CD.data_ready:
+    r2 = 0
+    if tof_L4CD and tof_L4CD.data_ready:
         r2 = tof_L4CD.distance
         if r2 > 50:
             r2 = 0
