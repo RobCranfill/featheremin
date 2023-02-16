@@ -104,3 +104,11 @@ class FeathereminDisplay9341:
 
     def setTextArea3(self, pText):
         self.text_area_3_.text = pText
+
+    def setTextAreaL(self, pText):
+        self.text_area_l_.text = pText
+
+    def setTextAreaR(self, pText):
+        self.text_area_r_.text = pText
+
+

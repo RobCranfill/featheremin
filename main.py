@@ -23,7 +23,7 @@ import adafruit_max9744
 from adafruit_apds9960.apds9960 import APDS9960
 
 # https://docs.circuitpython.org/projects/seesaw/en/latest/
-from adafruit_seesaw import seesaw, rotaryio, digitalio
+from adafruit_seesaw import seesaw, rotaryio, digitalio, neopixel
 
 
 TEST_WHEEL_MODE = True
@@ -192,12 +192,15 @@ def init_hardware():
 
 
     # ------------------ Rotary encoder
-    rotaryThingy = seesaw.Seesaw(i2c, addr=0x36)
-    seesaw_product = (rotaryThingy.get_version() >> 16) & 0xFFFF
-    print("Found product {}".format(seesaw_product))
-    if seesaw_product != 4991:
-        print("Wrong firmware loaded?  Expected 4991")
-    encoder = rotaryio.IncrementalEncoder(rotaryThingy)
+    ss = seesaw.Seesaw(i2c, addr=0x36)
+    seesaw_v = (ss.get_version() >> 16) & 0xFFFF
+    print(f"Found product {seesaw_v}")
+    if seesaw_v != 4991:
+        print("**** Wrong Rotary encoder firmware loaded?  Expected 4991")
+    encoder = rotaryio.IncrementalEncoder(ss)
+
+    # pixel = neopixel.NeoPixel(ss, 6, 1)
+    # pixel.brightness = 1.0
 
 
     print("init_hardware OK!")
@@ -227,16 +230,15 @@ wave_tables = makeWaveTables()
 dac = audiopwmio.PWMAudioOut(AUDIO_OUT_PIN)
 
 sleepTime = 0.2
+dSleep = 0
 
-nTries = 100
 iter = 1
 sampleRateLast = -1
 
-useSineWave = True
 wheelPositionLast = None
 
 chromatic = False
-display.setTextArea3(f"Chromatic: {chromatic}")
+display.setTextArea3(f"{'Chromatic' if chromatic else 'Continuous'}")
 
 # chunkSleep = 0.1
 # display.setTextArea2(f"Sleep: {chunkSleep:.2f}")
@@ -249,6 +251,7 @@ waveTable = wave_tables[waveIndex][1]
 print(f"Wave #{waveIndex}: {waveName}")
 display.setTextArea1(f"Waveform: {waveName}")
 
+
 while True:
 
     # negate the position to make clockwise rotation positive
@@ -260,7 +263,7 @@ while True:
 
     if gesture:
         g = gesture.gesture()
-        if g == 1:
+        if g == 1: # down (in default orientation)
             waveIndex += 1
             if waveIndex >= len(wave_tables):
                 waveIndex = 0
@@ -268,7 +271,7 @@ while True:
             waveTable = wave_tables[waveIndex][1]
             print(f"Wave #{waveIndex}: {wave_tables[waveIndex][0]}")
             display.setTextArea1(f"Waveform: {waveName}")
-        elif g == 2:
+        elif g == 2: # up
             waveIndex -= 1
             if waveIndex < 0:
                 waveIndex = len(wave_tables) - 1
@@ -276,17 +279,19 @@ while True:
             waveTable = wave_tables[waveIndex][1]
             print(f"Wave #{waveIndex}: {wave_tables[waveIndex][0]}")
             display.setTextArea1(f"Waveform: {waveName}")
-        elif g == 3:
+        elif g == 3: # right
             chromatic = False
             print("left: chromatic off")
-            display.setTextArea3(f"Chromatic: {chromatic}")
-        elif g == 4:
+            # display.setTextArea3(f"Chromatic: {chromatic}")
+            display.setTextAreaL(f"{'Chromatic' if chromatic else 'Continuous'}")
+        elif g == 4: # left
             chromatic = True
             print("right: chromatic on")
-            display.setTextArea3(f"Chromatic: {chromatic}")
+            # display.setTextArea3(f"Chromatic: {chromatic}")
+            display.setTextAreaL(f"{'Chromatic' if chromatic else 'Continuous'}")
 
     # Get the two ranges, if available. 
-    # (Why is one always available, but the other is not?)
+    # (TODO: Why is one always available, but the other is not?)
     #
     r1 = tof_L0X.range
     r2 = 0
@@ -295,6 +300,10 @@ while True:
         if r2 > 50:
             r2 = 0
         # print(f"r2 = {r2}")
+
+        dSleep = r2/100
+        display.setTextArea2(f"Sleep: {dSleep:.2f}")
+            
         tof_L4CD.clear_interrupt()
 
     if r1 > 0 and r1 < 500:
@@ -303,29 +312,30 @@ while True:
             sampleRate = int(rangeToNote(r1))
             if sampleRate != sampleRateLast:
 
-                dac.stop()
-
-                print(f"#{iter}: {r1} mm -> {sampleRate} Hz {'sine' if useSineWave else 'square'}")
-
-                waveSample = audiocore.RawSample(waveTable, sample_rate=sampleRate)
-
                 sampleRateLast = sampleRate
-                dac.play(waveSample, loop=True)
 
-                dSleep = r2/100
-                display.setTextArea2(f"Sleep: {dSleep:.2f}")
+                print(f"Chrom: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz; sleep {dSleep} ")
+
+
+
+                dac.stop()
+                waveSample = audiocore.RawSample(waveTable, sample_rate=sampleRate)
+                dac.play(waveSample, loop=True)
                 time.sleep(dSleep)
 
         else: # "continuous", not chromatic; more "theremin-like"?
             
+            # TODO: this sleeps, then plays, as opposed to the other way round. Why?
+    
+
             # sampleRate = int(rangeToRate(r))
             sampleRate = int(30*r1 + 1000)
 
             # dac.stop()
 
-            dSleep = r2/100
-            display.setTextArea2(f"Sleep: {dSleep:.2f}")
             time.sleep(dSleep)
+
+            display.setTextAreaL(f"S {iter}")
 
             print(f"Cont: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz; sleep {dSleep} ")
 
