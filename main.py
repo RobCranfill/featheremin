@@ -215,6 +215,49 @@ def rangeToNote(mm: int) -> float:
     return sr
 
 
+# in: gestureValue, wave_tables...
+# uses: wave_tables
+# returns: pWaveIndex, wave_table, wave_name, chrom_flag
+# sets: textarea1, textareaL
+def handleGesture(gestureValue, pWaveIndex, pChromFlag):
+
+    chrom_flag = pChromFlag
+    wave_name  = wave_tables[pWaveIndex][0]
+    wave_table = wave_tables[pWaveIndex][1]
+
+    if gestureValue == 1: # down (in default orientation)
+        pWaveIndex += 1
+        if pWaveIndex >= len(wave_tables):
+            pWaveIndex = 0
+        wave_name  = wave_tables[pWaveIndex][0]
+        wave_table = wave_tables[pWaveIndex][1]
+        print(f"Wave #{pWaveIndex}: {wave_name}")
+        display.setTextArea1(f"Waveform: {wave_name}")
+    
+    elif gestureValue == 2: # up
+        pWaveIndex -= 1
+        if pWaveIndex < 0:
+            pWaveIndex = len(wave_tables) - 1
+        wave_name  = wave_tables[pWaveIndex][0]
+        wave_table = wave_tables[pWaveIndex][1]
+        print(f"Wave #{pWaveIndex}: {wave_name}")
+        display.setTextArea1(f"Waveform: {wave_name}")
+
+    elif gestureValue == 3: # right
+        chrom_flag = False
+        print("right: chromatic off")
+        # display.setTextArea3(f"Chromatic: {chromatic}")
+        display.setTextAreaL(f"{'Chromatic' if chromatic else 'Continuous'}")
+
+    elif gestureValue == 4: # left
+        chrom_flag = True
+        print("left: chromatic on")
+        # display.setTextArea3(f"Chromatic: {chromatic}")
+        display.setTextAreaL(f"{'Chromatic' if chromatic else 'Continuous'}")
+
+    return pWaveIndex, wave_table, wave_name, chrom_flag
+
+
 # --------------------------------------------------
 # ------------------- begin main -------------------
 
@@ -238,7 +281,9 @@ sampleRateLast = -1
 wheelPositionLast = None
 
 chromatic = False
-display.setTextArea3(f"{'Chromatic' if chromatic else 'Continuous'}")
+# display.setTextArea3(f"{'Chromatic' if chromatic else 'Continuous'}")
+display.setTextArea3("")
+
 
 # chunkSleep = 0.1
 # display.setTextArea2(f"Sleep: {chunkSleep:.2f}")
@@ -260,35 +305,10 @@ while True:
         wheelPositionLast = position
         print(f"Wheel: {position}")
 
-
-    if gesture:
-        g = gesture.gesture()
-        if g == 1: # down (in default orientation)
-            waveIndex += 1
-            if waveIndex >= len(wave_tables):
-                waveIndex = 0
-            waveName  = wave_tables[waveIndex][0]
-            waveTable = wave_tables[waveIndex][1]
-            print(f"Wave #{waveIndex}: {wave_tables[waveIndex][0]}")
-            display.setTextArea1(f"Waveform: {waveName}")
-        elif g == 2: # up
-            waveIndex -= 1
-            if waveIndex < 0:
-                waveIndex = len(wave_tables) - 1
-            waveName  = wave_tables[waveIndex][0]
-            waveTable = wave_tables[waveIndex][1]
-            print(f"Wave #{waveIndex}: {wave_tables[waveIndex][0]}")
-            display.setTextArea1(f"Waveform: {waveName}")
-        elif g == 3: # right
-            chromatic = False
-            print("left: chromatic off")
-            # display.setTextArea3(f"Chromatic: {chromatic}")
-            display.setTextAreaL(f"{'Chromatic' if chromatic else 'Continuous'}")
-        elif g == 4: # left
-            chromatic = True
-            print("right: chromatic on")
-            # display.setTextArea3(f"Chromatic: {chromatic}")
-            display.setTextAreaL(f"{'Chromatic' if chromatic else 'Continuous'}")
+    if gesture: # if we have a sensor; TODO: not necessary to check?
+        gx = gesture.gesture()
+        if gx > 0:
+            waveIndex, waveTable, waveName, chromatic = handleGesture(gx, waveIndex, chromatic)
 
     # Get the two ranges, if available. 
     # (TODO: Why is one always available, but the other is not?)
@@ -326,7 +346,6 @@ while True:
         else: # "continuous", not chromatic; more "theremin-like"?
             
             # TODO: this sleeps, then plays, as opposed to the other way round. Why?
-    
 
             # sampleRate = int(rangeToRate(r))
             sampleRate = int(30*r1 + 1000)
@@ -334,8 +353,6 @@ while True:
             # dac.stop()
 
             time.sleep(dSleep)
-
-            display.setTextAreaL(f"S {iter}")
 
             print(f"Cont: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz; sleep {dSleep} ")
 
