@@ -35,7 +35,7 @@ AUDIO_OUT_PIN = board.D5
 L4CD_ALTERNATE_I2C_ADDR = 0x31
 
 ONE_OCTAVE = [440.00, 466.16, 493.88, 523.25, 554.37, 587.33, 622.25, 659.25, 698.46, 739.99, 83.99, 830.61]
-
+INITIAL_AMP_VOLUME = 10 # 25 is max for 20W amp and 3W 4 ohm speaker with 12v to amp.
 
 def makeWaveTables():
     # Generate one period of various waveforms.
@@ -161,9 +161,11 @@ def init_hardware():
     # Turn L0X back on and instantiate its object
     print("Turning VL53L0X back on...")
     L0X_reset.value = 1
-    L0X = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
-    print(f"VL53L0X init OK ({L0X})")
-
+    try:
+        L0X = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
+        print(f"VL53L0X init OK ({L0X})")
+    except:
+        print("**** No VL53L0X? Continuing....")
 
     # ----------------- APDS9960 gesture/proximity/color sensor
     apds = None
@@ -172,6 +174,7 @@ def init_hardware():
         apds.enable_proximity = True
         apds.enable_gesture = True
         apds.rotation = 180
+        print("APDS9960 init OK")
     except:
         print("**** No APDS9960? Continuing....")
 
@@ -186,7 +189,8 @@ def init_hardware():
     amp = None
     try:
         amp = adafruit_max9744.MAX9744(i2c)
-        amp.volume = 25 # OK for small 4 ohm, 3W speaker
+        amp.volume = INITIAL_AMP_VOLUME
+        print("MAX9744 init OK")
     except:
         print("**** No MAX9744 found; continuing....")
 
