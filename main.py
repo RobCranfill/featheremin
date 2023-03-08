@@ -25,6 +25,15 @@ from adafruit_apds9960.apds9960 import APDS9960
 # https://docs.circuitpython.org/projects/seesaw/en/latest/
 from adafruit_seesaw import seesaw, rotaryio, digitalio, neopixel
 
+import asyncio
+
+
+AUDIO_DAC_MODE = True # True: use DAC for audio output; False: use PWM
+
+# pins - MSB first?
+DAC_PINS = [board.D6, board.D9, board.D10, board.D11, board.D12, board.D13, board.D24, board.D25]
+
+
 
 TEST_WHEEL_MODE = True
 
@@ -264,112 +273,121 @@ def handleGesture(gestureValue, pWaveIndex, pChromFlag):
 
 # --------------------------------------------------
 # ------------------- begin main -------------------
-
-print("\nHello, fetheremin!")
-
-tof_L0X, tof_L4CD, gesture, display, amp, wheel = init_hardware()
-
-
-wave_tables = makeWaveTables()
-
-
-# TODO: use or set quiescent_value ???
-dac = audiopwmio.PWMAudioOut(AUDIO_OUT_PIN)
-
-sleepTime = 0.2
-dSleep = 0
-
-iter = 1
-sampleRateLast = -1
-
-wheelPositionLast = None
-
-chromatic = False
-# display.setTextArea3(f"{'Chromatic' if chromatic else 'Continuous'}")
-display.setTextArea3("")
-
-
-# chunkSleep = 0.1
-# display.setTextArea2(f"Sleep: {chunkSleep:.2f}")
-display.setTextArea2(f"Sleep: {0:.2f}")
-
-waveIndex = 0
-waveName  = wave_tables[waveIndex][0]
-waveTable = wave_tables[waveIndex][1]
-
-print(f"Wave #{waveIndex}: {waveName}")
-display.setTextArea1(f"Waveform: {waveName}")
-
-
-while True:
-
-    # negate the position to make clockwise rotation positive
-    position = - wheel.position
-    if position != wheelPositionLast:
-        wheelPositionLast = position
-        print(f"Wheel: {position}")
-
-    if gesture: # if we have a sensor; TODO: not necessary to check?
-        gx = gesture.gesture()
-        if gx > 0:
-            waveIndex, waveTable, waveName, chromatic = handleGesture(gx, waveIndex, chromatic)
-
-    # Get the two ranges, if available. 
-    # (TODO: Why is one always available, but the other is not?)
-    #
-    r1 = tof_L0X.range
-    r2 = 0
-    if tof_L4CD and tof_L4CD.data_ready:
-        r2 = tof_L4CD.distance
-        if r2 > 50:
-            r2 = 0
-        # print(f"r2 = {r2}")
-
-        dSleep = r2/100
-        display.setTextArea2(f"Sleep: {dSleep:.2f}")
-            
-        tof_L4CD.clear_interrupt()
-
-    if r1 > 0 and r1 < 500:
-
-        if chromatic:
-            sampleRate = int(rangeToNote(r1))
-            if sampleRate != sampleRateLast:
-
-                sampleRateLast = sampleRate
-
-                print(f"Chrom: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz; sleep {dSleep} ")
-
-
-
-                dac.stop()
-                waveSample = audiocore.RawSample(waveTable, sample_rate=sampleRate)
-                dac.play(waveSample, loop=True)
-                time.sleep(dSleep)
-
-        else: # "continuous", not chromatic; more "theremin-like"?
-            
-            # TODO: this sleeps, then plays, as opposed to the other way round. Why?
-
-            # sampleRate = int(rangeToRate(r))
-            sampleRate = int(30*r1 + 1000)
-
-            # dac.stop()
-
-            time.sleep(dSleep)
-
-            print(f"Cont: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz; sleep {dSleep} ")
-
-            waveSample = audiocore.RawSample(waveTable, sample_rate=sampleRate)
-            
-            dac.play(waveSample, loop=True)
-
-            # dac.stop()
-            
-    else:
-        dac.stop()
-        # pass
-        # time.sleep(sleepTime)
+def main():
         
-    iter += 1
-    # print("Done!")
+    print("\nHello, fetheremin!")
+
+    tof_L0X, tof_L4CD, gesture, display, amp, wheel = init_hardware()
+
+
+    wave_tables = makeWaveTables()
+
+
+    # TODO: use or set quiescent_value ???
+    if AUDIO_DAC_MODE:
+        print("INITIALIZE R-LADDER DAC - DO NOTHING?")
+    else:
+        dac = audiopwmio.PWMAudioOut(AUDIO_OUT_PIN)
+
+    sleepTime = 0.2
+    dSleep = 0
+
+    iter = 1
+    sampleRateLast = -1
+
+    wheelPositionLast = None
+
+    chromatic = False
+    # display.setTextArea3(f"{'Chromatic' if chromatic else 'Continuous'}")
+    display.setTextArea3("")
+
+
+    # chunkSleep = 0.1
+    # display.setTextArea2(f"Sleep: {chunkSleep:.2f}")
+    display.setTextArea2(f"Sleep: {0:.2f}")
+
+    waveIndex = 0
+    waveName  = wave_tables[waveIndex][0]
+    waveTable = wave_tables[waveIndex][1]
+
+    print(f"Wave #{waveIndex}: {waveName}")
+    display.setTextArea1(f"Waveform: {waveName}")
+
+
+    while True:
+
+        # negate the position to make clockwise rotation positive
+        position = - wheel.position
+        if position != wheelPositionLast:
+            wheelPositionLast = position
+            print(f"Wheel: {position}")
+
+        if gesture: # if we have a sensor; TODO: not necessary to check?
+            gx = gesture.gesture()
+            if gx > 0:
+                waveIndex, waveTable, waveName, chromatic = handleGesture(gx, waveIndex, chromatic)
+
+        # Get the two ranges, if available. 
+        # (TODO: Why is one always available, but the other is not?)
+        #
+        r1 = tof_L0X.range
+        r2 = 0
+        if tof_L4CD and tof_L4CD.data_ready:
+            r2 = tof_L4CD.distance
+            if r2 > 50:
+                r2 = 0
+            # print(f"r2 = {r2}")
+
+            dSleep = r2/100
+            display.setTextArea2(f"Sleep: {dSleep:.2f}")
+                
+            tof_L4CD.clear_interrupt()
+
+        if r1 > 0 and r1 < 500:
+
+            if chromatic:
+                sampleRate = int(rangeToNote(r1))
+                if sampleRate != sampleRateLast:
+
+                    sampleRateLast = sampleRate
+
+                    print(f"Chrom: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz; sleep {dSleep} ")
+
+                    if AUDIO_DAC_MODE:
+                        print("DAC HOW?")
+                    else:
+                        dac.stop()
+                        waveSample = audiocore.RawSample(waveTable, sample_rate=sampleRate)
+                        dac.play(waveSample, loop=True)
+                        time.sleep(dSleep)
+
+            else: # "continuous", not chromatic; more "theremin-like"?
+                
+                # TODO: this sleeps, then plays, as opposed to the other way round. Why?
+
+                # sampleRate = int(rangeToRate(r))
+                sampleRate = int(30*r1 + 1000)
+
+                if AUDIO_DAC_MODE:
+                    print("DAC HOW?")
+                else:
+                    # dac.stop()
+                    time.sleep(dSleep)
+                    print(f"Cont: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz; sleep {dSleep} ")
+                    waveSample = audiocore.RawSample(waveTable, sample_rate=sampleRate)
+                    dac.play(waveSample, loop=True)
+                    # dac.stop()
+
+        else: # no proximity detected
+            if AUDIO_DAC_MODE:
+                print("DAC HOW?")
+            else:
+                dac.stop()
+                # time.sleep(sleepTime)
+            
+        iter += 1
+        # print("Done!")
+
+
+# :-)
+main()
