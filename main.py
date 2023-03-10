@@ -11,6 +11,7 @@ import math
 import time
 import sys
 
+# Adafruit libraries - www.adafruit.com
 import feathereminDisplay9341
 import adafruit_vl53l0x
 import adafruit_vl53l4cd
@@ -29,10 +30,12 @@ ONE_OCTAVE = [440.00, 466.16, 493.88, 523.25, 554.37, 587.33, 622.25, 659.25, 69
 INITIAL_AMP_VOLUME = 10 # 25 is max for 20W amp and 3W 4 ohm speaker with 12v to amp.
 
 def makeWaveTables():
-    # Generate one period of various waveforms.
-    # TODO: Should there be an odd or even number of samples? we want to start and end with zeros, or at least some number.
-    #
-    # originally 8K
+    """ Generate one period of various waveforms.
+    TODO: Should there be an odd or even number of samples? 
+          Do we want to start and end with zeros?
+    """
+
+    # originally 8K as per example code
     length = 16000 // 440 + 1
 
     sine_data = array.array("H", [0] * length)
@@ -200,14 +203,11 @@ def init_hardware():
 # Map the distance in millimeters to a sample rate in Hz
 #
 def rangeToNote(mm: int) -> float:
-
-    sr = ONE_OCTAVE[mm // 50] * (8000 // 440)
-    return sr
+    return ONE_OCTAVE[mm // 50] * (8000 // 440)
 
 
-# in: x
-# returns: y
-# sets: z
+# in: the gesture sensor, current wave index, chromatic flag
+# returns: new wave index, new chromatic flag
 def handleGesture(gSensor, pWaveIndex, pChromatic):
 
     gestureValue = gSensor.gesture()
@@ -228,15 +228,9 @@ def handleGesture(gSensor, pWaveIndex, pChromatic):
         print("right: chromatic off")
         # display.setTextArea3(f"Chromatic: {chromatic}")
         # pDisplay.setTextAreaL("Continuous")
-
     elif gestureValue == 4: # left
         pChromatic = True
         print("left: chromatic on")
-        # display.setTextArea3(f"Chromatic: {chromatic}")
-        # pDisplay.setTextAreaL("Chromatic")
-
-    else:
-        return None
 
     return pWaveIndex, pChromatic
 
@@ -270,7 +264,7 @@ def main():
     display.setTextArea3("")
 
     chromatic = False
-    display.setTextAreaL(f"{'Chromatic' if chromatic else 'Continuous'}")
+    display.setTextAreaL("Continuous")
     display.setTextAreaR("L/R: wave\nU/D: Chrom")
 
 
@@ -293,7 +287,7 @@ def main():
             print(f"Wave #{waveIndex}: {waveName}")
             display.setTextArea1(f"Waveform: {waveName}")
         if chromatic != lastChromatic:
-            display.setTextArea3(f"Chromatic: SHUTTHEFUCKUP")
+            display.setTextAreaL(f"{'Chromatic' if chromatic else 'Continuous'}")
 
 
         # Get the two ranges, as available. 
