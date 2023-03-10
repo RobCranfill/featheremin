@@ -127,7 +127,8 @@ def init_hardware():
     # VL53L0X sensor is now turned off
 
 
-# ----------------- VL53L4CD time-of-flight sensor 
+# ----------------- VL53L4CD time-of-flight sensor
+# TODO: the init stuff is messed up - fix (some only in 'except' clause, etc)
     # L4CD ToF
     # First, see if it's there with the new address (left over from a previous run).
     # If so, we don't need to re-assign it.
@@ -140,27 +141,28 @@ def init_hardware():
             L4CD = adafruit_vl53l4cd.VL53L4CD(i2c)
             print(f"Found VL53L4CD at default address; now set to {hex(L4CD_ALTERNATE_I2C_ADDR)}")
             L4CD.set_address(L4CD_ALTERNATE_I2C_ADDR)  # address assigned should NOT be already in use
-
-            # # set non-default values?
-            # L4CD.inter_measurement = 0
-            # L4CD.timing_budget = 100
-
-            # print("--------------------")
-            # print("VL53L4CD:")
-            # model_id, module_type = L4CD.model_info
-            # print(f"    Model ID: 0x{model_id:0X}")
-            # print(f"    Module Type: 0x{module_type:0X}")
-            # print(f"    Timing Budget: {L4CD.timing_budget}")
-            # print(f"    Inter-Measurement: {L4CD.inter_measurement}")
-            # print("--------------------")
-
-            L4CD.start_ranging()
             print("VL53L4CD init OK")
-
         except:
             print("**** No VL53L4CD?")
-            # sys.exit(1)
             L4CD = None
+
+    finally:
+
+        # # set non-default values?
+        L4CD.inter_measurement = 0
+        L4CD.timing_budget = 100
+        L4CD.start_ranging()
+
+        if True:
+            print("--------------------")
+            print("VL53L4CD:")
+            model_id, module_type = L4CD.model_info
+            print(f"    Model ID: 0x{model_id:0X}")
+            print(f"    Module Type: 0x{module_type:0X}")
+            print(f"    Timing Budget: {L4CD.timing_budget}")
+            print(f"    Inter-Measurement: {L4CD.inter_measurement}")
+            print("--------------------")
+
 
 
     # ----------------- VL53L0X time-of-flight sensor, part 2
@@ -230,9 +232,9 @@ def rangeToNote(mm: int) -> float:
 # sets: textarea1, textareaL
 def handleGesture(gestureValue, pDisplay, pWaveTalbes, pWaveIndex, pChromatic):
 
+    chrom_flag = pChromatic
     wave_name  = pWaveTalbes[pWaveIndex][0]
     wave_table = pWaveTalbes[pWaveIndex][1]
-    chrom_flag = pChromatic
     
     if gestureValue == 1: # down (in default orientation)
         pWaveIndex += 1
@@ -298,7 +300,7 @@ def main():
 
     # chunkSleep = 0.1
     # display.setTextArea2(f"Sleep: {chunkSleep:.2f}")
-    display.setTextArea2(f"Sleep: {0:.2f}")
+    display.setTextArea2(f"Sleep: {dSleep:.2f}")
 
     waveIndex = 0
     waveName  = wave_tables[waveIndex][0]
@@ -307,7 +309,7 @@ def main():
     print(f"Wave #{waveIndex}: {waveName}")
     display.setTextArea1(f"Waveform: {waveName}")
 
-
+    # Main loop
     while True:
 
         # negate the position to make clockwise rotation positive
@@ -332,8 +334,9 @@ def main():
                 r2 = 0
             # print(f"r2 = {r2}")
 
-            dSleep = r2/100
-            display.setTextArea2(f"Sleep: {dSleep:.2f}")
+            if r2 != 0:
+                dSleep = r2/100
+                display.setTextArea2(f"Sleep: {dSleep:.2f}")
                 
             tof_L4CD.clear_interrupt()
 
