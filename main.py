@@ -1,7 +1,6 @@
 """Make noises, based on various sensors including time-of-flight.
     robcranfill@gmail.com
 """
-
 import array
 import audiocore
 import audiopwmio
@@ -13,26 +12,12 @@ import time
 import sys
 
 import feathereminDisplay9341
-
 import adafruit_vl53l0x
 import adafruit_vl53l4cd
-
 import adafruit_max9744
-
-# https://learn.adafruit.com/adafruit-apds9960-breakout/circuitpython
 from adafruit_apds9960.apds9960 import APDS9960
-
-# https://docs.circuitpython.org/projects/seesaw/en/latest/
 from adafruit_seesaw import seesaw, rotaryio, digitalio, neopixel
 
-import asyncio
-
-# in test:
-AUDIO_DAC_MODE = False # True: use DAC for audio output; False: use PWM
-# pins - MSB first?
-DAC_PINS = [board.D6, board.D9, board.D10, board.D11, board.D12, board.D13, board.D24, board.D25]
-
-TEST_WHEEL_MODE = True
 
 # GPIO pins used:
 L0X_RESET_OUT = board.D4
@@ -278,11 +263,7 @@ def main():
 
     wave_tables = makeWaveTables()
 
-    # TODO: use or set quiescent_value ???
-    if AUDIO_DAC_MODE:
-        print("INITIALIZE R-LADDER DAC - DO NOTHING?")
-    else:
-        dac = audiopwmio.PWMAudioOut(AUDIO_OUT_PIN)
+    dac = audiopwmio.PWMAudioOut(AUDIO_OUT_PIN)
 
     dSleep = 0
 
@@ -351,13 +332,10 @@ def main():
 
                     print(f"Chrom: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz; sleep {dSleep} ")
 
-                    if AUDIO_DAC_MODE:
-                        print("DAC HOW?")
-                    else:
-                        dac.stop()
-                        waveSample = audiocore.RawSample(waveTable, sample_rate=sampleRate)
-                        dac.play(waveSample, loop=True)
-                        time.sleep(dSleep)
+                    dac.stop()
+                    waveSample = audiocore.RawSample(waveTable, sample_rate=sampleRate)
+                    dac.play(waveSample, loop=True)
+                    time.sleep(dSleep)
 
             else: # "continuous", not chromatic; more "theremin-like"?
                 
@@ -366,21 +344,15 @@ def main():
                 # sampleRate = int(rangeToRate(r))
                 sampleRate = int(30*r1 + 1000)
 
-                if AUDIO_DAC_MODE:
-                    print("DAC HOW?")
-                else:
-                    # dac.stop()
-                    time.sleep(dSleep)
-                    print(f"Cont: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz; sleep {dSleep} ")
-                    waveSample = audiocore.RawSample(waveTable, sample_rate=sampleRate)
-                    dac.play(waveSample, loop=True)
-                    # dac.stop()
+                # dac.stop()
+                time.sleep(dSleep)
+                print(f"Cont: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz; sleep {dSleep} ")
+                waveSample = audiocore.RawSample(waveTable, sample_rate=sampleRate)
+                dac.play(waveSample, loop=True)
+                # dac.stop()
 
         else: # no proximity detected
-            if AUDIO_DAC_MODE:
-                print("DAC HOW?")
-            else:
-                dac.stop()
+            dac.stop()
             
         iter += 1
         # print("Done!")
