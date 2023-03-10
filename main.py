@@ -90,7 +90,7 @@ def init_hardware():
     None of this checks for errors (missing hardware) yet - it will just malf.
 
     Returns:
-        list of objects: the various harware items initialized.
+        list of objects: the various hardware items initialized.
     """
 
     # Easist way to init I2C on a Feather:
@@ -157,6 +157,9 @@ def init_hardware():
     except:
         print("**** No VL53L0X? Continuing....")
 
+    # Show bus again?
+    # showI2Cbus()
+
     # ----------------- APDS9960 gesture/proximity/color sensor
     apds = None
     try:
@@ -168,13 +171,9 @@ def init_hardware():
     except:
         print("**** No APDS9960? Continuing....")
 
-    # ----------------- OLED display
-    oledDisp = feathereminDisplay9341.FeathereminDisplay9341()
+    # ----------------- display
+    display = feathereminDisplay9341.FeathereminDisplay9341()
     print("Display init OK")
-
-    # Show it again? nah.
-    # showI2Cbus()
-
 
     # ------------------ MAX9744 amp, if any
     amp = None
@@ -185,7 +184,6 @@ def init_hardware():
     except:
         print("**** No MAX9744 amplifier found; continuing....")
 
-
     # ------------------ Rotary encoder
     ss = seesaw.Seesaw(i2c, addr=0x36)
     seesaw_v = (ss.get_version() >> 16) & 0xFFFF
@@ -195,12 +193,12 @@ def init_hardware():
     encoder = rotaryio.IncrementalEncoder(ss)
     print("Rotary encoder init OK")
 
+
     # pixel = neopixel.NeoPixel(ss, 6, 1)
     # pixel.brightness = 1.0
 
-
     print("\ninit_hardware OK!\n")
-    return L0X, L4CD, apds, oledDisp, amp, encoder
+    return L0X, L4CD, apds, display, amp, encoder
 
 
 # Map the distance in millimeters to a sample rate in Hz
@@ -211,21 +209,21 @@ def rangeToNote(mm: int) -> float:
     return sr
 
 
-# in: gestureValue, pDisplay, pWaveTalbes, pWaveIndex
+# in: gestureValue, pDisplay, pWaveTables, pWaveIndex
 # returns: pWaveIndex, wave_table, wave_name, chrom_flag
 # sets: textarea1, textareaL
-def handleGesture(gestureValue, pDisplay, pWaveTalbes, pWaveIndex, pChromatic):
+def handleGesture(gestureValue, pDisplay, pWaveTables, pWaveIndex, pChromatic):
 
     chrom_flag = pChromatic
-    wave_name  = pWaveTalbes[pWaveIndex][0]
-    wave_table = pWaveTalbes[pWaveIndex][1]
+    wave_name  = pWaveTables[pWaveIndex][0]
+    wave_table = pWaveTables[pWaveIndex][1]
     
     if gestureValue == 1: # down (in default orientation)
         pWaveIndex += 1
         if pWaveIndex >= len(wave_tables):
             pWaveIndex = 0
-        wave_name  = pWaveTalbes[pWaveIndex][0]
-        wave_table = pWaveTalbes[pWaveIndex][1]
+        wave_name  = pWaveTables[pWaveIndex][0]
+        wave_table = pWaveTables[pWaveIndex][1]
         print(f"Wave #{pWaveIndex}: {wave_name}")
         pDisplay.setTextArea1(f"Waveform: {wave_name}")
     
@@ -233,8 +231,8 @@ def handleGesture(gestureValue, pDisplay, pWaveTalbes, pWaveIndex, pChromatic):
         pWaveIndex -= 1
         if pWaveIndex < 0:
             pWaveIndex = len(wave_tables) - 1
-        wave_name  = pWaveTalbes[pWaveIndex][0]
-        wave_table = pWaveTalbes[pWaveIndex][1]
+        wave_name  = pWaveTables[pWaveIndex][0]
+        wave_table = pWaveTables[pWaveIndex][1]
         print(f"Wave #{pWaveIndex}: {wave_name}")
         pDisplay.setTextArea1(f"Waveform: {wave_name}")
 
@@ -318,45 +316,38 @@ def main():
             if r2 != 0:
                 dSleep = r2/100
                 display.setTextArea2(f"Sleep: {dSleep:.2f}")
+                print(f"Sleep: {dSleep:.2f}")
 
             # must do this to get another reading
             tof_L4CD.clear_interrupt()
 
         if r1 > 0 and r1 < 500:
 
+            # TODO: do I really need to sleep after starting a sample, 
+            # or should we just keep going till the paramters change?
+            
             if chromatic:
                 sampleRate = int(rangeToNote(r1))
                 if sampleRate != sampleRateLast:
 
                     sampleRateLast = sampleRate
-
-                    print(f"Chrom: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz; sleep {dSleep} ")
-
-                    dac.stop()
+                    print(f"Chrom: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz; sleep {dSleep:.2f} ")
                     waveSample = audiocore.RawSample(waveTable, sample_rate=sampleRate)
                     dac.play(waveSample, loop=True)
                     time.sleep(dSleep)
 
             else: # "continuous", not chromatic; more "theremin-like"?
                 
-                # TODO: this sleeps, then plays, as opposed to the other way round. Why?
-
-                # sampleRate = int(rangeToRate(r))
                 sampleRate = int(30*r1 + 1000)
-
-                # dac.stop()
-                time.sleep(dSleep)
-                print(f"Cont: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz; sleep {dSleep} ")
+                print(f"Cont: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz; sleep {dSleep:.2f} ")
                 waveSample = audiocore.RawSample(waveTable, sample_rate=sampleRate)
                 dac.play(waveSample, loop=True)
-                # dac.stop()
+                time.sleep(dSleep)
 
         else: # no proximity detected
             dac.stop()
-            
+
         iter += 1
-        # print("Done!")
 
 
-# :-)
-main()
+main() # :-)

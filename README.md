@@ -29,7 +29,7 @@ Note: The main code is in a file called "main.py", to avoid the irritating warni
 ## Hardware config
 The I2C devices are chained together in no particular order, except the OLED display is last because it has only one STEMMA QT connector.
 
-The STEMMA (non-QT!) amplifer's signal pin is connected to GPIO A1, and the VL53L0X's XSHUT pin is connected to GPIO A0.
+The STEMMA (non-QT!) amplifer's signal pin is connected to one GPIO (see the code for which one), and the VL53L0X's XSHUT pin is connected to another.
 
 
 ## Things to Do
