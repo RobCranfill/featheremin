@@ -127,8 +127,7 @@ def init_hardware():
     # VL53L0X sensor is now turned off
 
 
-# ----------------- VL53L4CD time-of-flight sensor
-# TODO: the init stuff is messed up - fix (some only in 'except' clause, etc)
+    # ----------------- VL53L4CD time-of-flight sensor
     # L4CD ToF
     # First, see if it's there with the new address (left over from a previous run).
     # If so, we don't need to re-assign it.
@@ -139,9 +138,9 @@ def init_hardware():
         print(f"Did not find VL53L4CD at {hex(L4CD_ALTERNATE_I2C_ADDR)}, trying default....")
         try:
             L4CD = adafruit_vl53l4cd.VL53L4CD(i2c)
-            print(f"Found VL53L4CD at default address; now set to {hex(L4CD_ALTERNATE_I2C_ADDR)}")
+            print(f"Found VL53L4CD at default address; setting to {hex(L4CD_ALTERNATE_I2C_ADDR)}...")
             L4CD.set_address(L4CD_ALTERNATE_I2C_ADDR)  # address assigned should NOT be already in use
-            print("VL53L4CD init OK")
+            print("VL53L4CD set_address OK")
         except:
             print("**** No VL53L4CD?")
             L4CD = None
@@ -153,17 +152,15 @@ def init_hardware():
         L4CD.timing_budget = 100
         L4CD.start_ranging()
 
-        if True:
-            print("--------------------")
-            print("VL53L4CD:")
-            model_id, module_type = L4CD.model_info
-            print(f"    Model ID: 0x{model_id:0X}")
-            print(f"    Module Type: 0x{module_type:0X}")
-            print(f"    Timing Budget: {L4CD.timing_budget}")
-            print(f"    Inter-Measurement: {L4CD.inter_measurement}")
-            print("--------------------")
-
-
+        # print("--------------------")
+        # print("VL53L4CD:")
+        # model_id, module_type = L4CD.model_info
+        # print(f"    Model ID: 0x{model_id:0X}")
+        # print(f"    Module Type: 0x{module_type:0X}")
+        # print(f"    Timing Budget: {L4CD.timing_budget}")
+        # print(f"    Inter-Measurement: {L4CD.inter_measurement}")
+        # print("--------------------")
+        print("VL53L4CD init OK")
 
     # ----------------- VL53L0X time-of-flight sensor, part 2
     # Turn L0X back on and instantiate its object
@@ -171,7 +168,7 @@ def init_hardware():
     L0X_reset.value = 1
     try:
         L0X = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
-        print(f"VL53L0X init OK ({L0X})")
+        print("VL53L0X init OK")
     except:
         print("**** No VL53L0X? Continuing....")
 
@@ -188,6 +185,7 @@ def init_hardware():
 
     # ----------------- OLED display
     oledDisp = feathereminDisplay9341.FeathereminDisplay9341()
+    print("Display init OK")
 
     # Show it again? nah.
     # showI2Cbus()
@@ -198,24 +196,25 @@ def init_hardware():
     try:
         amp = adafruit_max9744.MAX9744(i2c)
         amp.volume = INITIAL_AMP_VOLUME
-        print("MAX9744 init OK")
+        print("MAX9744 amp init OK")
     except:
-        print("**** No MAX9744 found; continuing....")
+        print("**** No MAX9744 amplifier found; continuing....")
 
 
     # ------------------ Rotary encoder
     ss = seesaw.Seesaw(i2c, addr=0x36)
     seesaw_v = (ss.get_version() >> 16) & 0xFFFF
-    print(f"Found product {seesaw_v}")
+    # print(f"Found product {seesaw_v}")
     if seesaw_v != 4991:
         print("**** Wrong Rotary encoder firmware loaded?  Expected 4991")
     encoder = rotaryio.IncrementalEncoder(ss)
+    print("Rotary encoder init OK")
 
     # pixel = neopixel.NeoPixel(ss, 6, 1)
     # pixel.brightness = 1.0
 
 
-    print("init_hardware OK!")
+    print("\ninit_hardware OK!\n")
     return L0X, L4CD, apds, oledDisp, amp, encoder
 
 
@@ -313,7 +312,7 @@ def main():
     while True:
 
         # negate the position to make clockwise rotation positive
-        position = - wheel.position
+        position = -wheel.position
         if position != wheelPositionLast:
             wheelPositionLast = position
             print(f"Wheel: {position}")
@@ -329,7 +328,7 @@ def main():
         r1 = tof_L0X.range
         r2 = 0
         if tof_L4CD and tof_L4CD.data_ready:
-            r2 = tof_L4CD.distance
+            r2 = max(0, tof_L4CD.distance - 10)
             if r2 > 50:
                 r2 = 0
             # print(f"r2 = {r2}")
@@ -337,7 +336,8 @@ def main():
             if r2 != 0:
                 dSleep = r2/100
                 display.setTextArea2(f"Sleep: {dSleep:.2f}")
-                
+
+            # must do this to get another reading
             tof_L4CD.clear_interrupt()
 
         if r1 > 0 and r1 < 500:
