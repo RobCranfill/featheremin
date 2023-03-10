@@ -284,7 +284,6 @@ def main():
     else:
         dac = audiopwmio.PWMAudioOut(AUDIO_OUT_PIN)
 
-    sleepTime = 0.2
     dSleep = 0
 
     iter = 1
@@ -292,21 +291,22 @@ def main():
 
     wheelPositionLast = None
 
-    chromatic = False
-    # display.setTextArea3(f"{'Chromatic' if chromatic else 'Continuous'}")
-    display.setTextArea3("")
-
-
-    # chunkSleep = 0.1
-    # display.setTextArea2(f"Sleep: {chunkSleep:.2f}")
-    display.setTextArea2(f"Sleep: {dSleep:.2f}")
-
     waveIndex = 0
     waveName  = wave_tables[waveIndex][0]
     waveTable = wave_tables[waveIndex][1]
 
     print(f"Wave #{waveIndex}: {waveName}")
     display.setTextArea1(f"Waveform: {waveName}")
+
+    display.setTextArea2(f"Sleep: {dSleep:.2f}")
+
+    display.setTextArea3("")
+
+    chromatic = False
+    display.setTextAreaL(f"{'Chromatic' if chromatic else 'Continuous'}")
+
+    display.setTextAreaR("L/R: wave\nU/D: Chrom")
+
 
     # Main loop
     while True:
@@ -317,10 +317,11 @@ def main():
             wheelPositionLast = position
             print(f"Wheel: {position}")
 
-        if gesture: # if we have a sensor; TODO: not necessary to check?
-            gx = gesture.gesture()
-            if gx > 0:
-                waveIndex, waveTable, waveName, chromatic = handleGesture(gx, display, wave_tables, waveIndex, chromatic)
+        # if gesture: # if we have a sensor; TODO: not necessary to check?
+        gx = gesture.gesture()
+        # TODO: move state-changing code out of handleGesture?
+        if gx > 0:
+            waveIndex, waveTable, waveName, chromatic = handleGesture(gx, display, wave_tables, waveIndex, chromatic)
 
         # Get the two ranges, if available. 
         # (TODO: Why is one always available, but the other is not?)
@@ -380,7 +381,6 @@ def main():
                 print("DAC HOW?")
             else:
                 dac.stop()
-                # time.sleep(sleepTime)
             
         iter += 1
         # print("Done!")
