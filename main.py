@@ -32,10 +32,8 @@ def makeWaveTables():
     # Generate one period of various waveforms.
     # TODO: Should there be an odd or even number of samples? we want to start and end with zeros, or at least some number.
     #
-    length = 8000 // 440 + 1
-
-    # this results in a fainter sound! why???
-    # length = 16000 // 440 + 1
+    # originally 8K
+    length = 16000 // 440 + 1
 
     sine_data = array.array("H", [0] * length)
     square_data = array.array("H", [0] * length)
@@ -62,17 +60,15 @@ def makeWaveTables():
         ("saw up", sawtooth_up_data),
         ("saw down", sawtooth_down_data)]
 
-    if False:
-        print(f"\nWave tables: {length} entries:")
-        print(f"{[w[0] for w in wave_tables]}")
-        for i in range(length):
-            print(
-                f"({i}," +
-                f"\t{sine_data[i]:5},\t{square_data[i]:5},\t{triangle_data[i]:5}," +
-                f"\t{sawtooth_up_data[i]:5},\t{sawtooth_down_data[i]:5})")
+    # print(f"\nWave tables: {length} entries:")
+    # print(f"{[w[0] for w in wave_tables]}")
+    # for i in range(length):
+    #     print(
+    #         f"({i}," +
+    #         f"\t{sine_data[i]:5},\t{square_data[i]:5},\t{triangle_data[i]:5}," +
+    #         f"\t{sawtooth_up_data[i]:5},\t{sawtooth_down_data[i]:5})")
 
     return wave_tables
-
     # end makeWaveTables()
 
 
@@ -80,7 +76,7 @@ def showI2Cbus():
     i2c = board.I2C()
     if i2c.try_lock():
         print(f"I2C addresses found: {[hex(x) for x in i2c.scan()]}")
-    i2c.unlock()
+        i2c.unlock()
 
 
 def init_hardware():
