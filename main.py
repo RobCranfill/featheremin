@@ -1,5 +1,5 @@
-"""Make noises, based on a time-of-flight sensor.
-    With VL53L4CD.
+"""Make noises, based on various sensors including time-of-flight.
+    robcranfill@gmail.com
 """
 
 import array
@@ -27,13 +27,10 @@ from adafruit_seesaw import seesaw, rotaryio, digitalio, neopixel
 
 import asyncio
 
-
-AUDIO_DAC_MODE = True # True: use DAC for audio output; False: use PWM
-
+# in test:
+AUDIO_DAC_MODE = False # True: use DAC for audio output; False: use PWM
 # pins - MSB first?
 DAC_PINS = [board.D6, board.D9, board.D10, board.D11, board.D12, board.D13, board.D24, board.D25]
-
-
 
 TEST_WHEEL_MODE = True
 
@@ -228,45 +225,44 @@ def rangeToNote(mm: int) -> float:
     return sr
 
 
-# in: gestureValue, wave_tables...
-# uses: wave_tables
+# in: gestureValue, pDisplay, pWaveTalbes, pWaveIndex
 # returns: pWaveIndex, wave_table, wave_name, chrom_flag
 # sets: textarea1, textareaL
-def handleGesture(gestureValue, pWaveIndex, pChromFlag):
+def handleGesture(gestureValue, pDisplay, pWaveTalbes, pWaveIndex, pChromatic):
 
-    chrom_flag = pChromFlag
-    wave_name  = wave_tables[pWaveIndex][0]
-    wave_table = wave_tables[pWaveIndex][1]
-
+    wave_name  = pWaveTalbes[pWaveIndex][0]
+    wave_table = pWaveTalbes[pWaveIndex][1]
+    chrom_flag = pChromatic
+    
     if gestureValue == 1: # down (in default orientation)
         pWaveIndex += 1
         if pWaveIndex >= len(wave_tables):
             pWaveIndex = 0
-        wave_name  = wave_tables[pWaveIndex][0]
-        wave_table = wave_tables[pWaveIndex][1]
+        wave_name  = pWaveTalbes[pWaveIndex][0]
+        wave_table = pWaveTalbes[pWaveIndex][1]
         print(f"Wave #{pWaveIndex}: {wave_name}")
-        display.setTextArea1(f"Waveform: {wave_name}")
+        pDisplay.setTextArea1(f"Waveform: {wave_name}")
     
     elif gestureValue == 2: # up
         pWaveIndex -= 1
         if pWaveIndex < 0:
             pWaveIndex = len(wave_tables) - 1
-        wave_name  = wave_tables[pWaveIndex][0]
-        wave_table = wave_tables[pWaveIndex][1]
+        wave_name  = pWaveTalbes[pWaveIndex][0]
+        wave_table = pWaveTalbes[pWaveIndex][1]
         print(f"Wave #{pWaveIndex}: {wave_name}")
-        display.setTextArea1(f"Waveform: {wave_name}")
+        pDisplay.setTextArea1(f"Waveform: {wave_name}")
 
     elif gestureValue == 3: # right
         chrom_flag = False
         print("right: chromatic off")
         # display.setTextArea3(f"Chromatic: {chromatic}")
-        display.setTextAreaL(f"{'Chromatic' if chromatic else 'Continuous'}")
+        pDisplay.setTextAreaL("Continuous")
 
     elif gestureValue == 4: # left
         chrom_flag = True
         print("left: chromatic on")
         # display.setTextArea3(f"Chromatic: {chromatic}")
-        display.setTextAreaL(f"{'Chromatic' if chromatic else 'Continuous'}")
+        pDisplay.setTextAreaL("Chromatic")
 
     return pWaveIndex, wave_table, wave_name, chrom_flag
 
@@ -274,14 +270,12 @@ def handleGesture(gestureValue, pWaveIndex, pChromFlag):
 # --------------------------------------------------
 # ------------------- begin main -------------------
 def main():
-        
+    global wave_tables
     print("\nHello, fetheremin!")
 
     tof_L0X, tof_L4CD, gesture, display, amp, wheel = init_hardware()
 
-
     wave_tables = makeWaveTables()
-
 
     # TODO: use or set quiescent_value ???
     if AUDIO_DAC_MODE:
@@ -325,7 +319,7 @@ def main():
         if gesture: # if we have a sensor; TODO: not necessary to check?
             gx = gesture.gesture()
             if gx > 0:
-                waveIndex, waveTable, waveName, chromatic = handleGesture(gx, waveIndex, chromatic)
+                waveIndex, waveTable, waveName, chromatic = handleGesture(gx, display, wave_tables, waveIndex, chromatic)
 
         # Get the two ranges, if available. 
         # (TODO: Why is one always available, but the other is not?)
