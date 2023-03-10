@@ -205,46 +205,40 @@ def rangeToNote(mm: int) -> float:
     return sr
 
 
-# in: gestureValue, pDisplay, pWaveTables, pWaveIndex
-# returns: pWaveIndex, wave_table, wave_name, chrom_flag
-# sets: textarea1, textareaL
-def handleGesture(gestureValue, pDisplay, pWaveTables, pWaveIndex, pChromatic):
+# in: x
+# returns: y
+# sets: z
+def handleGesture(gSensor, pWaveIndex, pChromatic):
 
-    chrom_flag = pChromatic
-    wave_name  = pWaveTables[pWaveIndex][0]
-    wave_table = pWaveTables[pWaveIndex][1]
-    
+    gestureValue = gSensor.gesture()
+    if gestureValue == 0:
+        return pWaveIndex, pChromatic
+
     if gestureValue == 1: # down (in default orientation)
         pWaveIndex += 1
         if pWaveIndex >= len(wave_tables):
             pWaveIndex = 0
-        wave_name  = pWaveTables[pWaveIndex][0]
-        wave_table = pWaveTables[pWaveIndex][1]
-        print(f"Wave #{pWaveIndex}: {wave_name}")
-        pDisplay.setTextArea1(f"Waveform: {wave_name}")
-    
     elif gestureValue == 2: # up
         pWaveIndex -= 1
         if pWaveIndex < 0:
             pWaveIndex = len(wave_tables) - 1
-        wave_name  = pWaveTables[pWaveIndex][0]
-        wave_table = pWaveTables[pWaveIndex][1]
-        print(f"Wave #{pWaveIndex}: {wave_name}")
-        pDisplay.setTextArea1(f"Waveform: {wave_name}")
 
     elif gestureValue == 3: # right
-        chrom_flag = False
+        pChromatic = False
         print("right: chromatic off")
         # display.setTextArea3(f"Chromatic: {chromatic}")
-        pDisplay.setTextAreaL("Continuous")
+        # pDisplay.setTextAreaL("Continuous")
 
     elif gestureValue == 4: # left
-        chrom_flag = True
+        pChromatic = True
         print("left: chromatic on")
         # display.setTextArea3(f"Chromatic: {chromatic}")
-        pDisplay.setTextAreaL("Chromatic")
+        # pDisplay.setTextAreaL("Chromatic")
 
-    return pWaveIndex, wave_table, wave_name, chrom_flag
+    else:
+        return None
+
+    return pWaveIndex, pChromatic
 
 
 # --------------------------------------------------
@@ -272,33 +266,37 @@ def main():
 
     print(f"Wave #{waveIndex}: {waveName}")
     display.setTextArea1(f"Waveform: {waveName}")
-
     display.setTextArea2(f"Sleep: {dSleep:.2f}")
-
     display.setTextArea3("")
 
     chromatic = False
     display.setTextAreaL(f"{'Chromatic' if chromatic else 'Continuous'}")
-
     display.setTextAreaR("L/R: wave\nU/D: Chrom")
 
 
     # Main loop
     while True:
 
+        # Rotary encoder wheel?
         # negate the position to make clockwise rotation positive
         position = -wheel.position
         if position != wheelPositionLast:
             wheelPositionLast = position
             print(f"Wheel: {position}")
 
-        # if gesture: # if we have a sensor; TODO: not necessary to check?
-        gx = gesture.gesture()
-        # TODO: move state-changing code out of handleGesture?
-        if gx > 0:
-            waveIndex, waveTable, waveName, chromatic = handleGesture(gx, display, wave_tables, waveIndex, chromatic)
+        # Gesture sensor?
+        lastWaveIndex, lastChromatic = waveIndex, chromatic
+        waveIndex, chromatic = handleGesture(gesture, waveIndex, chromatic)
+        if waveIndex != lastWaveIndex:
+            waveName  = wave_tables[waveIndex][0]
+            waveTable = wave_tables[waveIndex][1]
+            print(f"Wave #{waveIndex}: {waveName}")
+            display.setTextArea1(f"Waveform: {waveName}")
+        if chromatic != lastChromatic:
+            display.setTextArea3(f"Chromatic: SHUTTHEFUCKUP")
 
-        # Get the two ranges, if available. 
+
+        # Get the two ranges, as available. 
         # (TODO: Why is one always available, but the other is not?)
         #
         r1 = tof_L0X.range
@@ -319,7 +317,7 @@ def main():
 
         if r1 > 0 and r1 < 500:
 
-            # TODO: do I really need to sleep after starting a sample, 
+            # TODO: do we really need to sleep after starting a sample, 
             # or should we just keep going till the paramters change?
             
             if chromatic:
