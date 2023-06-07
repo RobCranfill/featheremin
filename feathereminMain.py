@@ -22,7 +22,10 @@ from adafruit_seesaw import seesaw, rotaryio, digitalio, neopixel
 
 # GPIO pins used:
 L0X_RESET_OUT = board.D4
-AUDIO_OUT_PIN = board.D5
+AUDIO_OUT_PIN = board.D5    # for PWM output
+TFT_DISPLAY_CS = board.A2
+TFT_DISPLAY_DC = board.A0
+TFT_DISPLAY_RESET = board.A1
 
 L4CD_ALTERNATE_I2C_ADDR = 0x31
 
@@ -171,7 +174,7 @@ def init_hardware():
         print("**** No APDS9960? Continuing....")
 
     # ----------------- display
-    display = feathereminDisplay9341.FeathereminDisplay9341(board.A2, board.A0, board.A1)
+    display = feathereminDisplay9341.FeathereminDisplay9341(TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET)
     print("Display init OK")
 
     # ------------------ MAX9744 amp, if any
@@ -189,10 +192,11 @@ def init_hardware():
     # print(f"Found product {seesaw_v}")
     if seesaw_v != 4991:
         print("**** Wrong Rotary encoder firmware loaded?  Expected 4991")
+        # what are we supposed to do about this??
     encoder = rotaryio.IncrementalEncoder(ss)
     print("Rotary encoder init OK")
 
-
+    # FIXME: tried to do something with the Neopixel but haven't figured anything out yet. :-/
     # pixel = neopixel.NeoPixel(ss, 6, 1)
     # pixel.brightness = 1.0
 
