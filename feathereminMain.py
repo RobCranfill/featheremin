@@ -19,6 +19,8 @@ import adafruit_max9744
 from adafruit_apds9960.apds9960 import APDS9960
 from adafruit_seesaw import seesaw, rotaryio, digitalio, neopixel
 
+import featherSynth2
+
 
 # GPIO pins used:
 L0X_RESET_OUT = board.D4
@@ -242,14 +244,18 @@ def handleGesture(gSensor, pWaveIndex, pChromatic):
 # --------------------------------------------------
 # ------------------- begin main -------------------
 def main():
-    global wave_tables
     print("\nHello, fetheremin!")
+    
+    global wave_tables
+    wave_tables = makeWaveTables()
 
     tof_L0X, tof_L4CD, gesture, display, amp, wheel = init_hardware()
 
-    wave_tables = makeWaveTables()
-
-    dac = audiopwmio.PWMAudioOut(AUDIO_OUT_PIN)
+    SIMPLE_DAC = False
+    if SIMPLE_DAC:
+        dac = audiopwmio.PWMAudioOut(AUDIO_OUT_PIN)
+    else:
+        synth = featherSynth2.FeatherSynth2(AUDIO_OUT_PIN)
 
     dSleep = 0
 
@@ -324,20 +330,37 @@ def main():
 
                     sampleRateLast = sampleRate
                     print(f"Chrom: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz; sleep {dSleep:.2f} ")
-                    waveSample = audiocore.RawSample(waveTable, sample_rate=sampleRate)
-                    dac.play(waveSample, loop=True)
+
+                    if SIMPLE_DAC:
+                        waveSample = audiocore.RawSample(waveTable, sample_rate=sampleRate)
+                        dac.play(waveSample, loop=True)
+                    else:
+                        synth.play(10*r1)
+                        dSleep = 10
+
                     time.sleep(dSleep)
 
             else: # "continuous", not chromatic; more "theremin-like"?
-                
-                sampleRate = int(30*r1 + 1000)
-                print(f"Cont: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz; sleep {dSleep:.2f} ")
-                waveSample = audiocore.RawSample(waveTable, sample_rate=sampleRate)
-                dac.play(waveSample, loop=True)
+                if SIMPLE_DAC:
+                    sampleRate = int(30*r1 + 1000)
+                    print(f"Cont: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz; sleep {dSleep:.2f} ")
+                    waveSample = audiocore.RawSample(waveTable, sample_rate=sampleRate)
+                    dac.play(waveSample, loop=True)
+                else:
+                    midiNote = r1
+                    if midiNote > 100:
+                        midiNote = 100
+                    print(f"Cont Synth: midiNote {midiNote} ")
+                    synth.play(midiNote)
+                    dSleep = 10
+
                 time.sleep(dSleep)
 
         else: # no proximity detected
-            dac.stop()
+            if SIMPLE_DAC:
+                dac.stop()
+            else:
+                synth.stop()
 
         iter += 1
 
