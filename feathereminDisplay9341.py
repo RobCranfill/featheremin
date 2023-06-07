@@ -24,7 +24,7 @@ L0X_RESET_OUT = board.D4
 
 class FeathereminDisplay9341:
 
-    def __init__(self) -> None:
+    def __init__(self, boardPinCS, boardPinDC, boardPinReset) -> None:
 
         splash_ = None
         text_area_1_ = None
@@ -35,10 +35,14 @@ class FeathereminDisplay9341:
         displayio.release_displays()
 
         spi = board.SPI()
-        tft_cs = board.A2
-        tft_dc = board.A0
 
-        display_bus = displayio.FourWire(spi, command=tft_dc, chip_select=tft_cs, reset=board.A1)
+        # tft_cs = board.A2
+        # tft_dc = board.A0
+        # tft_reset = board.A1
+
+        tft_cs, tft_dc, tft_reset = boardPinCS, boardPinDC, boardPinReset
+
+        display_bus = displayio.FourWire(spi, command=tft_dc, chip_select=tft_cs, reset=tft_reset)
         try:
             display = adafruit_ili9341.ILI9341(display_bus, width=320, height=240, rotation=180)
         except:
@@ -112,3 +116,7 @@ class FeathereminDisplay9341:
         self.text_area_r_.text = pText
 
 
+    def test(self):
+        self.setTextArea1(" You are")
+        self.setTextArea2(" hideous")
+        self.setTextArea3("orangutan!")

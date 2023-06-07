@@ -171,7 +171,7 @@ def init_hardware():
         print("**** No APDS9960? Continuing....")
 
     # ----------------- display
-    display = feathereminDisplay9341.FeathereminDisplay9341()
+    display = feathereminDisplay9341.FeathereminDisplay9341(board.A2, board.A0, board.A1)
     print("Display init OK")
 
     # ------------------ MAX9744 amp, if any
