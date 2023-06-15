@@ -19,7 +19,7 @@ import adafruit_max9744
 from adafruit_apds9960.apds9960 import APDS9960
 from adafruit_seesaw import seesaw, rotaryio, digitalio, neopixel
 
-import featherSynth2
+import featherSynth5
 
 
 # GPIO pins used:
@@ -255,7 +255,7 @@ def main():
     if SIMPLE_DAC:
         dac = audiopwmio.PWMAudioOut(AUDIO_OUT_PIN)
     else:
-        synth = featherSynth2.FeatherSynth2(AUDIO_OUT_PIN)
+        synth = featherSynth5.FeatherSynth(AUDIO_OUT_PIN)
 
     dSleep = 0
 
