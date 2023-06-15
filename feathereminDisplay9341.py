@@ -114,8 +114,13 @@ class FeathereminDisplay9341:
     def setTextAreaR(self, pText):
         self.text_area_r_.text = pText
 
-
-    def test(self):
+    '''
+    This does not return!
+    '''
+    def test(self) -> NoReturn:
         self.setTextArea1(" You are")
         self.setTextArea2(" hideous")
         self.setTextArea3("orangutan!")
+        print("Display test waiting, so display doesn't get erased.")
+        while True:
+            pass
