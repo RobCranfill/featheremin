@@ -20,7 +20,6 @@ import sys
 from digitalio import DigitalInOut, Direction
 from adafruit_vl53l0x import VL53L0X
 
-L0X_RESET_OUT = board.D4
 
 class FeathereminDisplay9341:
 
