@@ -244,7 +244,12 @@ def handleGesture(gSensor, pWaveIndex, pChromatic):
 # --------------------------------------------------
 # ------------------- begin main -------------------
 def main():
-    print("\nHello, fetheremin!")
+
+    # turn off auto-reload?
+    import supervisor
+    supervisor.runtime.autoreload = False  # CirPy 8 and above
+
+    print("\nHello, fetheremin!\n")
     
     global wave_tables
     wave_tables = makeWaveTables()
@@ -347,12 +352,13 @@ def main():
                     waveSample = audiocore.RawSample(waveTable, sample_rate=sampleRate)
                     dac.play(waveSample, loop=True)
                 else:
-                    midiNote = r1
-                    if midiNote > 100:
-                        midiNote = 100
+                    # map millimeters to midi notes (0-127); non-integers ok (or even 'good'!)
+                    midiNote = r1/4
+                    if midiNote > 127:
+                        midiNote = 127
                     print(f"Cont Synth: midiNote {midiNote} ")
                     synth.play(midiNote)
-                    dSleep = 10
+                    dSleep = 0.01
 
                 time.sleep(dSleep)
 
