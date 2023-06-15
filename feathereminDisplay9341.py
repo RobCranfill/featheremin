@@ -7,7 +7,8 @@ Display object for
     AdafruitProduct ID: 1480
 and using the Adafruit CircuitPython DisplayIO ILI9341 or compatible module.
 
-Pinouts are for the 2.4" TFT FeatherWing or Breakout with a Feather M4 or M0.
+Pinouts are passed in on object creation.
+
 """
 import board
 import terminalio
@@ -20,7 +21,7 @@ import sys
 from digitalio import DigitalInOut, Direction
 from adafruit_vl53l0x import VL53L0X
 
-
+# TODO: just call this a "FeathereminDisplay" object ?
 class FeathereminDisplay9341:
 
     def __init__(self, boardPinCS, boardPinDC, boardPinReset) -> None:
@@ -45,8 +46,10 @@ class FeathereminDisplay9341:
         try:
             display = adafruit_ili9341.ILI9341(display_bus, width=320, height=240, rotation=180)
         except:
-            print("No display found?")
-            sys.exit(1) # FIXME: this is probably rude
+            print("No ILI9341 display found?")
+            # FIXME: is this rude or ok?
+            while True:
+                pass
 
         # Make the display context
         splash = displayio.Group()
