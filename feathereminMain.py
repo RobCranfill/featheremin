@@ -250,18 +250,25 @@ def main():
     supervisor.runtime.autoreload = False  # CirPy 8 and above
 
     print("\nHello, fetheremin!\n")
-    
-    global wave_tables
-    wave_tables = makeWaveTables()
 
+    # Initialize the hardware, dying if something critical is missing.
+    #
     tof_L0X, tof_L4CD, gesture, display, amp, wheel = init_hardware()
 
     SIMPLE_DAC = False
     if SIMPLE_DAC:
+        global wave_tables
+        wave_tables = makeWaveTables()
         dac = audiopwmio.PWMAudioOut(AUDIO_OUT_PIN)
+
+        waveIndex = 0
+        waveName  = wave_tables[waveIndex][0]
+        waveTable = wave_tables[waveIndex][1]
     else:
         synth = featherSynth5.FeatherSynth(AUDIO_OUT_PIN)
-
+        waveIndex = 0
+        waveName  = "SIO: Sine"
+        sioSineFlag = False
     dSleep = 0
 
     iter = 1
@@ -269,16 +276,15 @@ def main():
 
     wheelPositionLast = None
 
-    waveIndex = 0
-    waveName  = wave_tables[waveIndex][0]
-    waveTable = wave_tables[waveIndex][1]
-
     print(f"Wave #{waveIndex}: {waveName}")
     display.setTextArea1(f"Waveform: {waveName}")
     display.setTextArea2(f"Sleep: {dSleep:.2f}")
     display.setTextArea3("")
 
+    # 'Chromatic', ie diatonic, as opposed to a continuous scale of frequencies.
     chromatic = False
+
+    # FIXME: this is rather ad-hoc
     display.setTextAreaL("Continuous")
     display.setTextAreaR("L/R: wave\nU/D: Chrom")
 
@@ -297,16 +303,22 @@ def main():
         lastWaveIndex, lastChromatic = waveIndex, chromatic
         waveIndex, chromatic = handleGesture(gesture, waveIndex, chromatic)
         if waveIndex != lastWaveIndex:
-            waveName  = wave_tables[waveIndex][0]
-            waveTable = wave_tables[waveIndex][1]
-            print(f"Wave #{waveIndex}: {waveName}")
-            display.setTextArea1(f"Waveform: {waveName}")
+            if SIMPLE_DAC:
+                waveName  = wave_tables[waveIndex][0]
+                waveTable = wave_tables[waveIndex][1]
+                print(f"Wave #{waveIndex}: {waveName}")
+                display.setTextArea1(f"Waveform: {waveName}")
+            else:
+                sioSineFlag = not sioSineFlag
+                # display.setTextAreaL(f"{'SIO: Sine' if sioSineFlag else 'SIO: Saw'}")
+                display.setTextAreaL(f"SIO: Sine? {sioSineFlag}")
+
         if chromatic != lastChromatic:
             display.setTextAreaL(f"{'Chromatic' if chromatic else 'Continuous'}")
 
 
         # Get the two ranges, as available. 
-        # (TODO: Why is one always available, but the other is not?)
+        # (FIXME: Why is one always available, but the other is not? Different hardware.)
         #
         r1 = tof_L0X.range
         r2 = 0
@@ -327,7 +339,7 @@ def main():
         if r1 > 0 and r1 < 500:
 
             # TODO: do we really need to sleep after starting a sample, 
-            # or should we just keep going till the paramters change?
+            # or should we just keep going till the parameters change?
             
             if chromatic:
                 sampleRate = int(rangeToNote(r1))
@@ -340,7 +352,10 @@ def main():
                         waveSample = audiocore.RawSample(waveTable, sample_rate=sampleRate)
                         dac.play(waveSample, loop=True)
                     else:
-                        synth.play(10*r1)
+                        midiNote = r1 / 4
+                        if midiNote > 127:
+                            midiNote = 127
+                        synth.play(midiNote)
                         dSleep = 10
 
                     time.sleep(dSleep)
@@ -353,12 +368,16 @@ def main():
                     dac.play(waveSample, loop=True)
                 else:
                     # map millimeters to midi notes (0-127); non-integers ok (or even 'good'!)
-                    midiNote = r1/4
+                    midiNote = r1 / 4
                     if midiNote > 127:
                         midiNote = 127
-                    print(f"Cont Synth: midiNote {midiNote} ")
-                    synth.play(midiNote)
-                    dSleep = 0.01
+                    print(f"Cont SIO: {sioSineFlag} midiNote {midiNote} ")
+                    synth.play(midiNote, sioSineFlag)
+                    dSleep = dSleep # 0.01
+
+                # hack
+                if r1 < 100:
+                    sioSineFlag = not sioSineFlag
 
                 time.sleep(dSleep)
 
