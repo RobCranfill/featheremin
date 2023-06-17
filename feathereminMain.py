@@ -293,60 +293,30 @@ def main():
         #
         r1 = tof_L0X.range
         r2 = 0
-        if tof_L4CD and tof_L4CD.data_ready:
+        if tof_L4CD.data_ready:
 
             r2 = max(0, tof_L4CD.distance - 10)
             if r2 > 50:
                 r2 = 0
             # print(f"r2 = {r2}")
-
-            # if r2 != 0:
-            #     dSleep = r2/100
-            #     display.setTextArea2(f"Sleep: {dSleep:.2f}")
-            #     print(f"Sleep: {dSleep:.2f}")
-
             # must do this to get another reading
             tof_L4CD.clear_interrupt()
 
         if r1 > 0 and r1 < 1000:
 
-            # TODO: This whole "sleep" thing is not well thought out.
+            midiNote = r1 / 4
+            if midiNote > 127:
+                midiNote = 127
 
             if chromatic:
-
-                # NEW SYNTH
-                # map millimeters to midi notes (0-127); integers only!
-                midiNote = int(r1 / 4)
-                if midiNote > 127:
-                    midiNote = 127
-                print(f"CHROM SIO: {sioSineFlag} midiNote {midiNote} ")
-                synth.play(midiNote)
-                time.sleep(dSleepMilliseconds/100)
-
-
-                # sampleRate = int(r1 / 25)
-                # if sampleRate != sampleRateLast:
-
-                #     sampleRateLast = sampleRate
-                #     print(f"Chrom: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz; sleep {dSleepMilliseconds:.2f} ")
-
-                #     # NEW SYNTH
-                #     midiNote = sampleRate
-                #     if midiNote > 127:
-                #         midiNote = 127
-                #     synth.play(midiNote, sioSineFlag)
-                #     time.sleep(dSleepMilliseconds)
+                midiNote = int(midiNote)
 
             else: # "continuous", not chromatic; more "theremin-like"?
+                pass
 
-                # NEW SYNTH
-                # map millimeters to midi notes (0-127); non-integers ok (or even 'good'!)
-                midiNote = r1 / 4
-                if midiNote > 127:
-                    midiNote = 127
-                print(f"Cont SIO: {sioSineFlag} midiNote {midiNote} ")
-                synth.play(midiNote)
-                time.sleep(dSleepMilliseconds/100)
+            print(f"SIO: midiNote {midiNote} ")
+            synth.play(midiNote)
+            time.sleep(dSleepMilliseconds/100)
 
         else: # no proximity detected
             synth.stop()
