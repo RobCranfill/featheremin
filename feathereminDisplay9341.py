@@ -1,13 +1,12 @@
-# SPDX-FileCopyrightText: 2021 ladyada for Adafruit Industries
-# SPDX-License-Identifier: MIT
-
 """
-Display object for
-    Adafruit 2.2" TFT Display - 2.2" 18-bit color TFT LCD display
-    AdafruitProduct ID: 1480
-and using the Adafruit CircuitPython DisplayIO ILI9341 or compatible module.
+    Display object for
+        Adafruit 2.2" TFT Display - 2.2" 18-bit color TFT LCD display
+        AdafruitProduct ID: 1480
+    and using the Adafruit CircuitPython DisplayIO ILI9341 or compatible module.
 
-Pinouts are passed in on object creation.
+    Wired via SPI ("four wire") interface.
+
+    The GPIO pins to use are passed in on object creation.
 
 """
 import board

@@ -7,15 +7,16 @@ I'm just having fun playing around with the Feather and its various add-ons.
 ## Hardware
 So far, (almost) all from Adafruit!
  * Feather RP2040 microcontroller (Adafruit product ID 4884)
- * VL53L0X Time-of-Flight distance sensor (product ID 3317)
- * VL53L4CD Time-of-Flight distance sensor (product ID 5396)
+ * VL53L0X Time-of-Flight distance sensor (Adafruit product ID 3317)
+ * VL53L4CD Time-of-Flight distance sensor (Adafruit product ID 5396)
  * APDS-9960 proximity/gesture sensor
- * 1 watt "Stemma" audio amplifier and speaker
- *  and/or 20 watt audio amp with external speaker
- * a breadboard or two, and a few wires to put them together!
+ * 1 watt audio amplifier and speaker...
+ *  ...or 20 watt audio amp with external speaker
+ * A TRS 1/8" headphone connector (that's stero but so far this thing is mono)
+ * a big breadboard and a few wires to put them together.
 
 ## Software required
- * Adafruit CircuitPython 7 (version 7.3.3 used)
+ * Adafruit CircuitPython 8 (version 8.2.0b1 used)
  * adafruit_vl53l0x.mpy
  * adafruit_apds9960 support lib (3 files)
 
@@ -24,24 +25,52 @@ So far this code is written in CircuitPython, but I may eventually want/need to 
 
 I have been using Visual Studio Code for my IDE but I don't think that matters.
 
-Note: The main code is in a file called "main.py", to avoid the irritating warnings VSCode throws when the usual name, "code.py", is used.
+Note: The main code is in a file called "feathereminMain.py"; if you simply "include" this in your main.py, it will run. This is how I test various other modules, by incudling the code I want to run/test in main.py, rather than vaving to rename entire files to "main.py".
 
 ## Hardware config
-The I2C devices are chained together in no particular order, except the OLED display is last because it has only one STEMMA QT connector.
+The I2C devices are chained together in no particular order, but the 20W amplifier, when I have it connected, is last in the chain because it has no Stemma connector and is attached via a Stemma pigtail.
 
-The STEMMA (non-QT!) amplifer's signal pin is connected to one GPIO (see the code for which one), and the VL53L0X's XSHUT pin is connected to another.
+The ILI9341 display is wired to the Feather's hardware SPI interface via 6 wires (plus ground and 3.3v).
+
+The VL53L0X's XSHUT pin is connected to a GPIO pin so we can re-assign its address.
+
+Currently, the PWM pin (see the code for which one) goes to the headphone jack. Alternatively it can go to the input opf whatever amplfier you are using.
 
 
 ## Things to Do
+ * 3 modes? diatonic, chromatic, continuous
+   * no, diatonic isn't that useful actually
+   * or should I say it's too complicated, but could be fun in the future
+   * what key? major/minor (which minor??)
+ * NEW: Synthio
+   * Main ToF: pitch
+   * 2nd ToF:
+     * If LFO on: LFO freq
+     * If LFO off:
+       * Env attack?
+       * Volume?
+       * Or these could be in the gesture cycle that selects LFO
+   * Gesture:
+     * Up/down: waveform (square, saw, sine)
+     * L/R: Cycle: LFO OFF / LFO vol / LFO bend
+   * Wheel: delay time
+   * Wheel push: CHROMATIC/CONTINUOUS !
+
  * What can I control?
+   * NEW: synthio params:
+     * on Synthesizer:
+       * waveform (overridden by Note), env (also overridden), low/high/bandpass filter
+     * on Note:
+       * frequency, env, filter, panning, amplitude (incl tremolo via LFO), bend (incl vibrato via LFO)
    * Volume
    * Frequency
      * continuous .vs. 'chunked'
        * different scales for chunk mode?
    * Waveform
-     * Sine, Square, Triangle, ???
+     * Sine, Square, Triangle, other??
      * Can I *load* interesting waveforms?
-   * Refresh rate
+   * <strike>Refresh rate</strike>
+
  * Display
    * Some small LCD
  * Controls
@@ -52,5 +81,5 @@ The STEMMA (non-QT!) amplifer's signal pin is connected to one GPIO (see the cod
    * Kill switch?
  * Future
    * Stereo
-   * Headphone out
+   * Line out?
 

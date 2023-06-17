@@ -31,53 +31,7 @@ TFT_DISPLAY_RESET = board.A1
 
 L4CD_ALTERNATE_I2C_ADDR = 0x31
 
-ONE_OCTAVE = [440.00, 466.16, 493.88, 523.25, 554.37, 587.33, 622.25, 659.25, 698.46, 739.99, 83.99, 830.61]
 INITIAL_AMP_VOLUME = 10 # 25 is max for 20W amp and 3W 4 ohm speaker with 12v to amp.
-
-def makeWaveTables():
-    """ Generate one period of various waveforms.
-    TODO: Should there be an odd or even number of samples? 
-          Do we want to start and end with zeros?
-    """
-
-    # originally 8K as per example code
-    length = 16000 // 440 + 1
-
-    sine_data = array.array("H", [0] * length)
-    square_data = array.array("H", [0] * length)
-    triangle_data = array.array("H", [0] * length)
-    sawtooth_up_data = array.array("H", [0] * length)
-    sawtooth_down_data = array.array("H", [0] * length)
-
-    for i in range(length):
-        sine_data[i] = int(math.sin(math.pi * 2 * i / length) * (2 ** 15) + 2 ** 15)
-        if i < length/2:
-            square_data[i] = 0
-            triangle_data[i] = 2 * int(2**16 * i/length)
-        else:
-            square_data[i] = int(2 ** 16)-1
-            triangle_data[i] = triangle_data[length-i-1]
-        sawtooth_up_data[i] = int(i*2**16/length)
-        sawtooth_down_data[i] = 2**16 - sawtooth_up_data[i] - 1
-
-    # This is the nice dictionary we return:
-    wave_tables = [
-        ("sine", sine_data), 
-        ("square", square_data), 
-        ("triangle", triangle_data),
-        ("saw up", sawtooth_up_data),
-        ("saw down", sawtooth_down_data)]
-
-    # print(f"\nWave tables: {length} entries:")
-    # print(f"{[w[0] for w in wave_tables]}")
-    # for i in range(length):
-    #     print(
-    #         f"({i}," +
-    #         f"\t{sine_data[i]:5},\t{square_data[i]:5},\t{triangle_data[i]:5}," +
-    #         f"\t{sawtooth_up_data[i]:5},\t{sawtooth_down_data[i]:5})")
-
-    return wave_tables
-    # end makeWaveTables()
 
 
 def showI2Cbus():
@@ -87,11 +41,20 @@ def showI2Cbus():
         i2c.unlock()
 
 
-def init_hardware():
+def init_hardware() -> list(adafruit_vl53l0x.VL53L0X,   # 1st ToF sensor
+                            adafruit_vl53l4cd.VL53L4CD, # 2nd ToF sensor
+                            APDS9960,                   # gesture sensor
+                            feathereminDisplay9341.FeathereminDisplay9341, # our display object
+                            adafruit_max9744.MAX9744,   # amplifier, or None
+                            rotaryio.IncrementalEncoder, # rotary encoder
+                            digitalio.DigitalIO,        # pushbutton in rotary encoder
+                            neopixel.NeoPixel           # neopixel in rotary encoder
+                            ):
+    
     """Initialize various hardware items.
     Namely, the I2C bus, Time of Flight sensors, gesture sensor, display, and amp (if attached).
 
-    None of this checks for errors (missing hardware) yet - it will just malf.
+    Mostly none of this checks for errors (missing hardware) yet - it will just malf.
 
     Returns:
         list of objects: the various hardware items initialized.
@@ -103,7 +66,6 @@ def init_hardware():
     # For fun
     showI2Cbus()
 
-
     # ----------------- VL53L0X time-of-flight sensor 
     # We will finish setting this sensor up 
     # *after* we turn it off an init the other ToF sensor.
@@ -114,7 +76,6 @@ def init_hardware():
     L0X_reset.direction = feather_digitalio.Direction.OUTPUT
     L0X_reset.value = 0
     # VL53L0X sensor is now turned off
-
 
     # ----------------- VL53L4CD time-of-flight sensor
     # L4CD ToF
@@ -133,9 +94,7 @@ def init_hardware():
         except:
             print("**** No VL53L4CD?")
             L4CD = None
-
     finally:
-
         # # set non-default values?
         L4CD.inter_measurement = 0
         L4CD.timing_budget = 100
@@ -175,7 +134,7 @@ def init_hardware():
     except:
         print("**** No APDS9960? Continuing....")
 
-    # ----------------- display
+    # ----------------- Our display object
     display = feathereminDisplay9341.FeathereminDisplay9341(TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET)
     print("Display init OK")
 
@@ -196,22 +155,23 @@ def init_hardware():
         print("**** Wrong Rotary encoder firmware loaded?  Expected 4991")
         # what are we supposed to do about this??
     encoder = rotaryio.IncrementalEncoder(ss)
+
+    # the "button" that is got by pushing down on the encoder wheel
+    ss.pin_mode(24, ss.INPUT_PULLUP)
+    wheel_button = digitalio.DigitalIO(ss, 24)
+    # button_held = False
+
+    # TODO: tried to do something with the Neopixel but haven't figured anything out yet. :-/
+    pixel = neopixel.NeoPixel(ss, 6, 1)
+    # pixel.brightness = 0.1
+    pixel.fill(0x004000) # green for go!
     print("Rotary encoder init OK")
 
-    # FIXME: tried to do something with the Neopixel but haven't figured anything out yet. :-/
-    # pixel = neopixel.NeoPixel(ss, 6, 1)
-    # pixel.brightness = 1.0
 
     print("\ninit_hardware OK!\n")
-    return L0X, L4CD, apds, display, amp, encoder
+    return L0X, L4CD, apds, display, amp, encoder, wheel_button, pixel
 
-
-# Map the distance in millimeters to a sample rate in Hz
-#
-def rangeToNote(mm: int) -> float:
-    return ONE_OCTAVE[mm // 50] * (8000 // 440)
-
-
+# TODO: this is f*ed up
 # in: the gesture sensor, current wave index, chromatic flag
 # returns: new wave index, new chromatic flag
 def handleGesture(gSensor, pWaveIndex, pChromatic):
@@ -241,34 +201,30 @@ def handleGesture(gSensor, pWaveIndex, pChromatic):
     return pWaveIndex, pChromatic
 
 
+def displayChromaticMode(disp, chromaticFlag):
+    disp.setTextAreaL("Chromatic" if chromaticFlag else "Continuous")
+
 # --------------------------------------------------
 # ------------------- begin main -------------------
 def main():
+    print("\nHello, Featheremin!\n")
 
     # turn off auto-reload?
     import supervisor
     supervisor.runtime.autoreload = False  # CirPy 8 and above
+    print("supervisor.runtime.autoreload = False")
 
-    print("\nHello, fetheremin!\n")
 
     # Initialize the hardware, dying if something critical is missing.
     #
-    tof_L0X, tof_L4CD, gesture, display, amp, wheel = init_hardware()
+    tof_L0X, tof_L4CD, gesture, display, amp, wheel, wheelButton, wheelLED = init_hardware()
 
-    SIMPLE_DAC = False
-    if SIMPLE_DAC:
-        global wave_tables
-        wave_tables = makeWaveTables()
-        dac = audiopwmio.PWMAudioOut(AUDIO_OUT_PIN)
+    # NEW SYNTH STUFF
+    synth = featherSynth5.FeatherSynth(AUDIO_OUT_PIN)
+    waveIndex = 0
+    waveName  = "SIO: Sine"
+    sioSineFlag = False
 
-        waveIndex = 0
-        waveName  = wave_tables[waveIndex][0]
-        waveTable = wave_tables[waveIndex][1]
-    else:
-        synth = featherSynth5.FeatherSynth(AUDIO_OUT_PIN)
-        waveIndex = 0
-        waveName  = "SIO: Sine"
-        sioSineFlag = False
     dSleep = 0
 
     iter = 1
@@ -281,37 +237,44 @@ def main():
     display.setTextArea2(f"Sleep: {dSleep:.2f}")
     display.setTextArea3("")
 
-    # 'Chromatic', ie diatonic, as opposed to a continuous scale of frequencies.
-    chromatic = False
+    # Play notes from a chromatic scale, as opposed to a continuous range of frequencies.
+    # That is, integer MIDI numbers .vs. fractional.
+    #
+    chromatic = True
 
+    displayChromaticMode(display, chromatic)
     # FIXME: this is rather ad-hoc
-    display.setTextAreaL("Continuous")
     display.setTextAreaR("L/R: wave\nU/D: Chrom")
 
+    wheelButtonHeld = False
 
-    # Main loop
+    # ==== Main loop ===============================================================
     while True:
 
-        # Rotary encoder wheel?
+        # Rotary encoder wheel.
         # negate the position to make clockwise rotation positive
         position = -wheel.position
         if position != wheelPositionLast:
             wheelPositionLast = position
             print(f"Wheel: {position}")
+        wheelButtonPressed = not wheelButton.value
+        if wheelButtonPressed and not wheelButtonHeld:
+            chromatic = not chromatic
+            displayChromaticMode(display, chromatic)
+            print(f"chromatic: {chromatic}")
+            wheelButtonHeld = True
+        if not wheelButtonPressed:
+            wheelButtonHeld = False
+
 
         # Gesture sensor?
         lastWaveIndex, lastChromatic = waveIndex, chromatic
         waveIndex, chromatic = handleGesture(gesture, waveIndex, chromatic)
         if waveIndex != lastWaveIndex:
-            if SIMPLE_DAC:
-                waveName  = wave_tables[waveIndex][0]
-                waveTable = wave_tables[waveIndex][1]
-                print(f"Wave #{waveIndex}: {waveName}")
-                display.setTextArea1(f"Waveform: {waveName}")
-            else:
-                sioSineFlag = not sioSineFlag
-                # display.setTextAreaL(f"{'SIO: Sine' if sioSineFlag else 'SIO: Saw'}")
-                display.setTextAreaL(f"SIO: Sine? {sioSineFlag}")
+
+            sioSineFlag = not sioSineFlag
+            # display.setTextAreaL(f"{'SIO: Sine' if sioSineFlag else 'SIO: Saw'}")
+            display.setTextAreaL(f"SIO: Sine? {sioSineFlag}")
 
         if chromatic != lastChromatic:
             display.setTextAreaL(f"{'Chromatic' if chromatic else 'Continuous'}")
@@ -338,42 +301,48 @@ def main():
 
         if r1 > 0 and r1 < 500:
 
-            # TODO: do we really need to sleep after starting a sample, 
-            # or should we just keep going till the parameters change?
-            
+            # TODO: This whole "sleep" thing is not well thought out.
+
             if chromatic:
-                sampleRate = int(rangeToNote(r1))
-                if sampleRate != sampleRateLast:
 
-                    sampleRateLast = sampleRate
-                    print(f"Chrom: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz; sleep {dSleep:.2f} ")
+                # NEW SYNTH
+                # map millimeters to midi notes (0-127); integers only!
+                midiNote = int(r1 / 4)
+                if midiNote > 127:
+                    midiNote = 127
+                print(f"CHROM SIO: {sioSineFlag} midiNote {midiNote} ")
+                synth.play(midiNote)
 
-                    if SIMPLE_DAC:
-                        waveSample = audiocore.RawSample(waveTable, sample_rate=sampleRate)
-                        dac.play(waveSample, loop=True)
-                    else:
-                        midiNote = r1 / 4
-                        if midiNote > 127:
-                            midiNote = 127
-                        synth.play(midiNote)
-                        dSleep = 10
+                # hack
+                if r1 < 100:
+                    sioSineFlag = not sioSineFlag
 
-                    time.sleep(dSleep)
+                time.sleep(dSleep)
+
+
+                # sampleRate = int(r1 / 25)
+                # if sampleRate != sampleRateLast:
+
+                #     sampleRateLast = sampleRate
+                #     print(f"Chrom: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz; sleep {dSleep:.2f} ")
+
+                #     # NEW SYNTH
+                #     midiNote = sampleRate
+                #     if midiNote > 127:
+                #         midiNote = 127
+                #     synth.play(midiNote, sioSineFlag)
+                #     time.sleep(dSleep)
 
             else: # "continuous", not chromatic; more "theremin-like"?
-                if SIMPLE_DAC:
-                    sampleRate = int(30*r1 + 1000)
-                    print(f"Cont: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz; sleep {dSleep:.2f} ")
-                    waveSample = audiocore.RawSample(waveTable, sample_rate=sampleRate)
-                    dac.play(waveSample, loop=True)
-                else:
-                    # map millimeters to midi notes (0-127); non-integers ok (or even 'good'!)
-                    midiNote = r1 / 4
-                    if midiNote > 127:
-                        midiNote = 127
-                    print(f"Cont SIO: {sioSineFlag} midiNote {midiNote} ")
-                    synth.play(midiNote, sioSineFlag)
-                    dSleep = dSleep # 0.01
+
+                # NEW SYNTH
+                # map millimeters to midi notes (0-127); non-integers ok (or even 'good'!)
+                midiNote = r1 / 4
+                if midiNote > 127:
+                    midiNote = 127
+                print(f"Cont SIO: {sioSineFlag} midiNote {midiNote} ")
+                synth.play(midiNote)
+                dSleep = dSleep # 0.01
 
                 # hack
                 if r1 < 100:
@@ -382,10 +351,7 @@ def main():
                 time.sleep(dSleep)
 
         else: # no proximity detected
-            if SIMPLE_DAC:
-                dac.stop()
-            else:
-                synth.stop()
+            synth.stop()
 
         iter += 1
 

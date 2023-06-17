@@ -14,6 +14,12 @@ SAMPLE_SIZE = 512
 SAMPLE_VOLUME = 32000
 
 class FeatherSynth:
+    '''
+        Our new synthio-based synth!
+
+        Can change waveform, envelope, add amplitude or frequecy LFO (tremelo or vibrato).
+        (^^^ some of that is TBD)
+    '''
     def __init__(self, boardPinPWM: microcontroller.Pin) -> None:
 
         # must prevent the PWMAudioOut object from being garbage collected:
@@ -24,19 +30,36 @@ class FeatherSynth:
         print(f"wave_sine: {self._wave_sine}")
         print(f"wave_saw: {self._wave_saw}")
 
+        env = synthio.Envelope(attack_time=0.1, decay_time=0.05, release_time=0.2,
+                                attack_level=1.0, sustain_level=0.8)
+        
+        # TODO: if envelope not given, "the default envelope, instantly turns notes on and off"
+        # which may be what we want!
+        self._synth = synthio.Synthesizer(sample_rate=SYNTH_RATE, envelope=env)
 
-        env = synthio.Envelope(attack_time = 0.1, decay_time = 0.05, release_time = 0.2,
-                                attack_level = 1.0, sustain_level = 0.8)
-        self._synth = synthio.Synthesizer(sample_rate = SYNTH_RATE, envelope=env)
+        # This will cause the Note to use a 50% duty cycle square wave
+        # TODO: this probably shouldn't be the default - sine?
+        #
+        self._waveform = None
+
         self._audio.play(self._synth)
 
-    def play(self, midi_note_value, waveformSineFlag):
-        if waveformSineFlag:
-            waveform = self._wave_sine
-        else:
-            waveform = self._wave_saw
+    def setWaveformSine(self) -> None:
+        self._waveform = self._wave_sine
+
+    def setWaveformSaw(self) -> None:
+        self._waveform = self._wave_saw
+
+    def setWaveformSquare(self) -> None:
+        self._waveform = None
+    
+    '''
+        Play a note.
+        "If waveform or envelope are None the synthesizer object's default waveform or envelope are used."
+    '''
+    def play(self, midi_note_value):
         # print(f"FeatherSynth5: play midiNote ({midi_note_value})")
-        note = synthio.Note(synthio.midi_to_hz(midi_note_value), waveform=waveform)
+        note = synthio.Note(synthio.midi_to_hz(midi_note_value), waveform=self._waveform)
         self._synth.release_all_then_press((note))
 
     def stop(self):
