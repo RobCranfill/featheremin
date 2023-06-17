@@ -204,6 +204,9 @@ def handleGesture(gSensor, pWaveIndex, pChromatic):
 def displayChromaticMode(disp, chromaticFlag):
     disp.setTextAreaL("Chromatic" if chromaticFlag else "Continuous")
 
+def displayDelay(disp, sleepMS):
+    disp.setTextArea2(f"Sleep: {sleepMS} ms")
+
 # --------------------------------------------------
 # ------------------- begin main -------------------
 def main():
@@ -225,7 +228,7 @@ def main():
     waveName  = "SIO: Sine"
     sioSineFlag = False
 
-    dSleep = 0
+    dSleepMilliseconds = 0
 
     iter = 1
     sampleRateLast = -1
@@ -233,8 +236,9 @@ def main():
     wheelPositionLast = None
 
     print(f"Wave #{waveIndex}: {waveName}")
+    displayDelay(display, dSleepMilliseconds)
+    # FIXME: ad hoc
     display.setTextArea1(f"Waveform: {waveName}")
-    display.setTextArea2(f"Sleep: {dSleep:.2f}")
     display.setTextArea3("")
 
     # Play notes from a chromatic scale, as opposed to a continuous range of frequencies.
@@ -243,8 +247,9 @@ def main():
     chromatic = True
 
     displayChromaticMode(display, chromatic)
-    # FIXME: this is rather ad-hoc
-    display.setTextAreaR("L/R: wave\nU/D: Chrom")
+
+    # Instructions here?
+    display.setTextAreaR("You are\nmahvelous!")
 
     wheelButtonHeld = False
 
@@ -256,7 +261,10 @@ def main():
         position = -wheel.position
         if position != wheelPositionLast:
             wheelPositionLast = position
-            print(f"Wheel: {position}")
+            dSleepMilliseconds = max(min(position, 100), 0)
+            print(f"Wheel {position} - > d = {dSleepMilliseconds}")
+            displayDelay(display, dSleepMilliseconds)
+
         wheelButtonPressed = not wheelButton.value
         if wheelButtonPressed and not wheelButtonHeld:
             chromatic = not chromatic
@@ -266,7 +274,7 @@ def main():
         if not wheelButtonPressed:
             wheelButtonHeld = False
 
-
+        # FIXME: this is all f*ed up
         # Gesture sensor?
         lastWaveIndex, lastChromatic = waveIndex, chromatic
         waveIndex, chromatic = handleGesture(gesture, waveIndex, chromatic)
@@ -286,20 +294,21 @@ def main():
         r1 = tof_L0X.range
         r2 = 0
         if tof_L4CD and tof_L4CD.data_ready:
+
             r2 = max(0, tof_L4CD.distance - 10)
             if r2 > 50:
                 r2 = 0
             # print(f"r2 = {r2}")
 
-            if r2 != 0:
-                dSleep = r2/100
-                display.setTextArea2(f"Sleep: {dSleep:.2f}")
-                print(f"Sleep: {dSleep:.2f}")
+            # if r2 != 0:
+            #     dSleep = r2/100
+            #     display.setTextArea2(f"Sleep: {dSleep:.2f}")
+            #     print(f"Sleep: {dSleep:.2f}")
 
             # must do this to get another reading
             tof_L4CD.clear_interrupt()
 
-        if r1 > 0 and r1 < 500:
+        if r1 > 0 and r1 < 1000:
 
             # TODO: This whole "sleep" thing is not well thought out.
 
@@ -312,26 +321,21 @@ def main():
                     midiNote = 127
                 print(f"CHROM SIO: {sioSineFlag} midiNote {midiNote} ")
                 synth.play(midiNote)
-
-                # hack
-                if r1 < 100:
-                    sioSineFlag = not sioSineFlag
-
-                time.sleep(dSleep)
+                time.sleep(dSleepMilliseconds/100)
 
 
                 # sampleRate = int(r1 / 25)
                 # if sampleRate != sampleRateLast:
 
                 #     sampleRateLast = sampleRate
-                #     print(f"Chrom: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz; sleep {dSleep:.2f} ")
+                #     print(f"Chrom: {waveName} #{iter}: {r1} mm -> {sampleRate} Hz; sleep {dSleepMilliseconds:.2f} ")
 
                 #     # NEW SYNTH
                 #     midiNote = sampleRate
                 #     if midiNote > 127:
                 #         midiNote = 127
                 #     synth.play(midiNote, sioSineFlag)
-                #     time.sleep(dSleep)
+                #     time.sleep(dSleepMilliseconds)
 
             else: # "continuous", not chromatic; more "theremin-like"?
 
@@ -342,13 +346,7 @@ def main():
                     midiNote = 127
                 print(f"Cont SIO: {sioSineFlag} midiNote {midiNote} ")
                 synth.play(midiNote)
-                dSleep = dSleep # 0.01
-
-                # hack
-                if r1 < 100:
-                    sioSineFlag = not sioSineFlag
-
-                time.sleep(dSleep)
+                time.sleep(dSleepMilliseconds/100)
 
         else: # no proximity detected
             synth.stop()
