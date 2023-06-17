@@ -19,6 +19,9 @@ class FeatherSynth:
 
         Can change waveform, envelope, add amplitude or frequecy LFO (tremelo or vibrato).
         (^^^ some of that is TBD)
+
+        TODO: Triangle wave? Saw up vs saw down? (which one is it now?)
+
     '''
     def __init__(self, boardPinPWM: microcontroller.Pin) -> None:
 
@@ -27,11 +30,10 @@ class FeatherSynth:
 
         self._wave_sine = np.array(np.sin(np.linspace(0, 2*np.pi, SAMPLE_SIZE, endpoint=False)) * SAMPLE_VOLUME, dtype=np.int16)
         self._wave_saw = np.linspace(SAMPLE_VOLUME, -SAMPLE_VOLUME, num=SAMPLE_SIZE, dtype=np.int16)
-        print(f"wave_sine: {self._wave_sine}")
-        print(f"wave_saw: {self._wave_saw}")
+        # print(f"wave_sine: {self._wave_sine}")
+        # print(f"wave_saw: {self._wave_saw}")
 
-        env = synthio.Envelope(attack_time=0.1, decay_time=0.05, release_time=0.2,
-                                attack_level=1.0, sustain_level=0.8)
+        env = synthio.Envelope(attack_time=0.1, decay_time=0.05, release_time=0.2, attack_level=1.0, sustain_level=0.8)
         
         # TODO: if envelope not given, "the default envelope, instantly turns notes on and off"
         # which may be what we want!
@@ -41,6 +43,9 @@ class FeatherSynth:
         # TODO: this probably shouldn't be the default - sine?
         #
         self._waveform = None
+        
+        self._tremLFO = synthio.LFO(rate=35, waveform=self._wave_sine) # ok to re-use sine wave here?
+        self._tremCurrent = None
 
         self._audio.play(self._synth)
 
@@ -53,12 +58,19 @@ class FeatherSynth:
     def setWaveformSquare(self) -> None:
         self._waveform = None
     
+    def setTremelo(self, tremFreq) -> None:
+        self._tremLFO.rate = tremFreq
+        self._tremCurrent = self._tremLFO
+
+    def clearTremelo(self) -> None:
+        self._tremCurrent = None
+
+
     '''
         Play a note.
         "If waveform or envelope are None the synthesizer object's default waveform or envelope are used."
     '''
     def play(self, midi_note_value):
-        # print(f"FeatherSynth5: play midiNote ({midi_note_value})")
         note = synthio.Note(synthio.midi_to_hz(midi_note_value), waveform=self._waveform)
         self._synth.release_all_then_press((note))
 

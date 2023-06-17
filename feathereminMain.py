@@ -288,7 +288,7 @@ def main():
             waveName = WAVEFORM_TYPES[waveIndex]
             print(f" -> Wave #{waveIndex}: {waveName}")
             displayWaveformName(display, waveName)
-            # FIXME: what's a better way to do this?
+            # FIXME: a better way to do this?
             if waveIndex == 0:
                 synth.setWaveformSquare()
             elif waveIndex == 1:
@@ -300,6 +300,13 @@ def main():
             lfoMode = LFO_MODES[lfoIndex]
             print(f" -> LFO #{lfoIndex}: {lfoMode}")
             displayLFOMode(display, lfoMode)
+
+            if lfoIndex == 2:
+                print("Testing treolo")
+                synth.setTremelo(20)
+            else:
+                print("Clearing treolo")
+                synth.clearTremelo()
 
         # Get the two ranges, as available. 
         # (FIXME: Why is one always available, but the other is not? Different hardware.)
