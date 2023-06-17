@@ -28,7 +28,7 @@ import featherSynth5
 #     SINE = 2
 #     SAW = 3
 WAVEFORM_TYPES = ["Square", "Sine", "Saw"]
-
+LFO_MODES = ["LFO Off", "Tremelo", "Vibrato"]
 
 # GPIO pins used:
 L0X_RESET_OUT = board.D4
@@ -179,40 +179,6 @@ def init_hardware() -> list(adafruit_vl53l0x.VL53L0X,   # 1st ToF sensor
     print("\ninit_hardware OK!\n")
     return L0X, L4CD, apds, display, amp, encoder, wheel_button, pixel
 
-
-# '''
-#     Up/down: waveform (square, saw, sine)
-#     L/R: Cycle: LFO OFF / LFO vol / LFO bend
-# '''
-# def handleGesture(gSensor, pWaveIndex, pChromatic):
-
-#     gestureValue = gSensor.gesture()
-#     print("gestureValue: {gestureValue}")
-
-#     # if gestureValue == 0:
-#     #     return pWaveIndex, pChromatic
-
-#     # if gestureValue == 1: # down
-#     #     pWaveIndex += 1
-#     #     if pWaveIndex >= len(wave_tables):
-#     #         pWaveIndex = 0
-#     # elif gestureValue == 2: # up
-#     #     pWaveIndex -= 1
-#     #     if pWaveIndex < 0:
-#     #         pWaveIndex = len(wave_tables) - 1
-
-#     # elif gestureValue == 3: # right
-#     #     pChromatic = False
-#     #     print("right: chromatic off")
-#     #     # display.setTextArea3(f"Chromatic: {chromatic}")
-#     #     # pDisplay.setTextAreaL("Continuous")
-#     # elif gestureValue == 4: # left
-#     #     pChromatic = True
-#     #     print("left: chromatic on")
-
-#     # return pWaveIndex, pChromatic
-
-
 def displayChromaticMode(disp, chromaticFlag):
     disp.setTextAreaL("Chromatic" if chromaticFlag else "Continuous")
 
@@ -221,6 +187,10 @@ def displayDelay(disp, sleepMS):
 
 def displayWaveformName(disp, name):
     disp.setTextArea1(f"Waveform: {name}")
+
+def displayLFOMode(disp, mode):
+    disp.setTextArea3(mode)
+
 
 # --------------------------------------------------
 # ------------------- begin main -------------------
@@ -240,10 +210,16 @@ def main():
 
     # new synthio !
     synth = featherSynth5.FeatherSynth(AUDIO_OUT_PIN)
+
     waveIndex = 0
     waveName  = WAVEFORM_TYPES[waveIndex]
     displayWaveformName(display, waveName)
     synth.setWaveformSquare()
+
+    # lfo?
+    lfoIndex = 0
+    lfoMode = LFO_MODES[lfoIndex]
+    displayLFOMode(display, lfoMode)
 
     dSleepMilliseconds = 0
     displayDelay(display, dSleepMilliseconds)
@@ -251,17 +227,13 @@ def main():
     iter = 1
     wheelPositionLast = None
 
-
-
-    # Play notes from a chromatic scale, as opposed to a continuous range of frequencies.
+    # Play notes from a chromatic scale, as opposed to a continuous range of frequencies?
     # That is, integer MIDI numbers .vs. fractional.
-    #
     chromatic = True
     displayChromaticMode(display, chromatic)
 
     # Instructions here?
     display.setTextAreaR("You are\nmahvelous!")
-    display.setTextArea3("") # unused so far
 
     wheelButtonHeld = False
 
@@ -288,6 +260,7 @@ def main():
 
 
         changedWaveform = False
+        lfoChanged = False
         gestureValue = gestureSensor.gesture()
         # print(f"gestureValue: {gestureValue}")
         if gestureValue == 1: # down
@@ -301,9 +274,15 @@ def main():
                 waveIndex = 0
             changedWaveform = True
         elif gestureValue == 3: # right
-            pass
+            lfoIndex = lfoIndex + 1
+            if lfoIndex >= len(LFO_MODES):
+                lfoIndex = 0
+            lfoChanged = True
         elif gestureValue == 4: # left
-            pass
+            lfoIndex = lfoIndex - 1
+            if lfoIndex < 0:
+                lfoIndex = len(LFO_MODES)-1
+            lfoChanged = True
 
         if changedWaveform:
             waveName = WAVEFORM_TYPES[waveIndex]
@@ -316,21 +295,11 @@ def main():
                 synth.setWaveformSine()
             elif waveIndex == 2:
                 synth.setWaveformSaw()
-            
 
-        # # FIXME: this is all f*ed up
-        # # Gesture sensor?
-        # lastWaveIndex, lastChromatic = waveIndex, chromatic
-        # waveIndex, chromatic = handleGesture(gesture, waveIndex, chromatic)
-        # if waveIndex != lastWaveIndex:
-
-        #     sioSineFlag = not sioSineFlag
-        #     # display.setTextAreaL(f"{'SIO: Sine' if sioSineFlag else 'SIO: Saw'}")
-        #     display.setTextAreaL(f"SIO: Sine? {sioSineFlag}")
-
-        # if chromatic != lastChromatic:
-        #     display.setTextAreaL(f"{'Chromatic' if chromatic else 'Continuous'}")
-
+        if lfoChanged:
+            lfoMode = LFO_MODES[lfoIndex]
+            print(f" -> LFO #{lfoIndex}: {lfoMode}")
+            displayLFOMode(display, lfoMode)
 
         # Get the two ranges, as available. 
         # (FIXME: Why is one always available, but the other is not? Different hardware.)
