@@ -13,11 +13,12 @@ SAMPLE_RATE = 28000
 SAMPLE_SIZE = 512
 SAMPLE_VOLUME = 32000
 
-LFO_NONE = 0.1
+
+LFO_NONE = 1.0
 
 class FeatherSynth:
     '''
-        Our new synthio-based synth!
+        Our new synthio-based synth.
 
         Can change waveform, envelope, add amplitude or frequecy LFO (tremolo or vibrato).
         (^^^ some of that is TBD)
@@ -73,16 +74,14 @@ class FeatherSynth:
         self._tremCurrent = self._tremLFO
 
     def clearTremolo(self) -> None:
-        self._tremCurrent = None
-        # self._tremLFO.rate = LFO_NONE
+        self._tremCurrent = LFO_NONE
 
     def setVibrato(self, vibFreq) -> None:
         self._vibLFO.rate = vibFreq
         self._vibCurrent = self._vibLFO
 
     def clearVibrato(self) -> None:
-        self._vibCurrent = None
-        # self._vibLFO.rate = LFO_NONE
+        self._vibCurrent = LFO_NONE
 
     '''
         Play a note.
@@ -93,10 +92,10 @@ class FeatherSynth:
 
         # print(f"note {midi_note_value}")
 
-        # note = synthio.Note(synthio.midi_to_hz(midi_note_value), waveform=self._waveform, 
-        #                     amplitude = self._tremCurrent, bend=self._vibCurrent)
+        note = synthio.Note(synthio.midi_to_hz(midi_note_value), waveform=self._waveform, 
+                            amplitude = self._tremCurrent, bend=self._vibCurrent)
         
-        note = synthio.Note(synthio.midi_to_hz(midi_note_value), waveform=self._waveform)
+        # note = synthio.Note(synthio.midi_to_hz(midi_note_value), waveform=self._waveform)
         
         self._synth.release_all_then_press((note))
 
@@ -123,11 +122,28 @@ class FeatherSynth:
         song_notes = (+3, 0, -2, -3, -2, 0, -2, -3)
         delay = 1
 
+        i = 1
         while True:
-            # print("Playing...")
+            print(f"Playing #{i}...")
+
+            if i%4 == 1:
+                self.clearTremolo()
+                self.clearVibrato()
+            elif i%4 == 2:
+                self.setTremolo(15)
+                self.clearVibrato()
+            elif i%4 == 3:
+                self.clearTremolo()
+                self.setVibrato(8)
+            elif i%4 == 0:
+                self.setTremolo(15)
+                self.setVibrato(8)
+
             for n in song_notes:
                 self.play(start_note + n)
                 time.sleep(delay)
             time.sleep(1) # hold last note for one more beat
             self.stop()
             time.sleep(1)
+
+            i += 1
