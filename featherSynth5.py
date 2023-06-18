@@ -140,8 +140,8 @@ class FeatherSynth:
                 self.clearTremolo()
                 self.setVibrato(8)
             elif i%4 == 0:
-                self.setTremolo(15)
-                self.setVibrato(8)
+                self.setTremolo(25)
+                self.setVibrato(4)
 
             for n in song_notes:
                 self.play(start_note + n)

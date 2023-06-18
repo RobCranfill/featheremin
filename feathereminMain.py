@@ -9,9 +9,10 @@ import busio
 import digitalio as feather_digitalio
 import math
 import time
+import supervisor
 import sys
 
-# Adafruit libraries - www.adafruit.com
+# Adafruit hardware libraries - www.adafruit.com
 import feathereminDisplay9341
 import adafruit_vl53l0x
 import adafruit_vl53l4cd
@@ -29,6 +30,8 @@ import featherSynth5
 #     SAW = 3
 WAVEFORM_TYPES = ["Square", "Sine", "Saw"]
 LFO_MODES = ["LFO Off", "Tremolo", "Vibrato"]
+lfo_tremolo_freq = 15
+lfo_vibrato_freq = 4
 
 # GPIO pins used:
 L0X_RESET_OUT = board.D4
@@ -67,6 +70,8 @@ def init_hardware() -> list(adafruit_vl53l0x.VL53L0X,   # 1st ToF sensor
     Returns:
         list of objects: the various hardware items initialized.
     """
+
+    # supervisor.reload()
 
     # Easist way to init I2C on a Feather:
     i2c = board.STEMMA_I2C()
@@ -328,6 +333,13 @@ def main():
                 r2 = 0
             # print(f"r2 = {r2}")
             # must do this to get another reading
+
+            # if mode was changed, the "other" mode has already been cleared, so we are good to go.
+            if lfoIndex == 1: # tremolo TODO: only set if r2 changed?
+                synth.setTremolo(r2)
+            elif lfoIndex == 2:
+                synth.setVibrato(r2)
+
             tof_L4CD.clear_interrupt()
 
         if r1 > 0 and r1 < 1000:
@@ -338,7 +350,8 @@ def main():
 
             if chromatic:
                 midiNote = int(midiNote)
-            print(f"{r1} -> {midiNote}")
+
+            # print(f"{r1} -> {midiNote}")
 
             synth.play(midiNote)
             time.sleep(dSleepMilliseconds/100)
