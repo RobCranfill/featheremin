@@ -13,11 +13,13 @@ SAMPLE_RATE = 28000
 SAMPLE_SIZE = 512
 SAMPLE_VOLUME = 32000
 
+LFO_NONE = 0.1
+
 class FeatherSynth:
     '''
         Our new synthio-based synth!
 
-        Can change waveform, envelope, add amplitude or frequecy LFO (tremelo or vibrato).
+        Can change waveform, envelope, add amplitude or frequecy LFO (tremolo or vibrato).
         (^^^ some of that is TBD)
 
         TODO: Triangle wave? Saw up vs saw down? (which one is it now?)
@@ -43,9 +45,17 @@ class FeatherSynth:
         # TODO: this probably shouldn't be the default - sine?
         #
         self._waveform = None
+        self._waveform = self._wave_sine
         
-        self._tremLFO = synthio.LFO(rate=35, waveform=self._wave_sine) # ok to re-use sine wave here?
+        # These two LFOs persist; we can change them as we like, 
+        # and if we don't want to use them we just set the thing we currently are using to 'None'
+        # FIXME: that didn't work.
+        #
+        self._tremLFO = synthio.LFO(rate=LFO_NONE, waveform=self._wave_sine) # ok to re-use sine wave here?
         self._tremCurrent = None
+
+        self._vibLFO = synthio.LFO(rate=LFO_NONE, waveform=self._wave_sine) # ok to re-use sine wave here?
+        self._vibCurrent = None
 
         self._audio.play(self._synth)
 
@@ -58,20 +68,36 @@ class FeatherSynth:
     def setWaveformSquare(self) -> None:
         self._waveform = None
     
-    def setTremelo(self, tremFreq) -> None:
+    def setTremolo(self, tremFreq) -> None:
         self._tremLFO.rate = tremFreq
         self._tremCurrent = self._tremLFO
 
-    def clearTremelo(self) -> None:
+    def clearTremolo(self) -> None:
         self._tremCurrent = None
+        # self._tremLFO.rate = LFO_NONE
 
+    def setVibrato(self, vibFreq) -> None:
+        self._vibLFO.rate = vibFreq
+        self._vibCurrent = self._vibLFO
+
+    def clearVibrato(self) -> None:
+        self._vibCurrent = None
+        # self._vibLFO.rate = LFO_NONE
 
     '''
         Play a note.
         "If waveform or envelope are None the synthesizer object's default waveform or envelope are used."
+        but what about tremolo or vibrato?
     '''
     def play(self, midi_note_value):
+
+        # print(f"note {midi_note_value}")
+
+        # note = synthio.Note(synthio.midi_to_hz(midi_note_value), waveform=self._waveform, 
+        #                     amplitude = self._tremCurrent, bend=self._vibCurrent)
+        
         note = synthio.Note(synthio.midi_to_hz(midi_note_value), waveform=self._waveform)
+        
         self._synth.release_all_then_press((note))
 
     def stop(self):
@@ -80,14 +106,28 @@ class FeatherSynth:
     def test(self):
         print("FeatherSynth5.test() with GC fix...")
 
-        # create a sawtooth sort of 'song', like a siren, with non-integer midi notes
+        # # create a sawtooth sort of 'song', like a siren, with non-integer midi notes
+        # start_note = 65
+        # song_notes = np.arange(0, 20, 0.1)
+        # song_notes = np.concatenate((song_notes, np.arange(20, 0, -0.1)), axis=0)
+        # delay = 0.02
+
+        # # integer version
+        # start_note = 65
+        # song_notes = np.arange(0, 20, 1)
+        # song_notes = np.concatenate((song_notes, np.arange(20, 0, -1)), axis=0)
+        # delay = 0.2
+        
+        # after 'tiny lfo song' by @todbot
         start_note = 65
-        song_notes = np.arange(0, 20, 0.1)
-        song_notes = np.concatenate((song_notes, np.arange(20, 0, -0.1)), axis=0)
+        song_notes = (+3, 0, -2, -3, -2, 0, -2, -3)
+        delay = 1
 
         while True:
-            print("Playing...")
+            # print("Playing...")
             for n in song_notes:
                 self.play(start_note + n)
-                time.sleep(.01)
-
+                time.sleep(delay)
+            time.sleep(1) # hold last note for one more beat
+            self.stop()
+            time.sleep(1)

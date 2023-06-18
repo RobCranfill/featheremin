@@ -28,7 +28,7 @@ import featherSynth5
 #     SINE = 2
 #     SAW = 3
 WAVEFORM_TYPES = ["Square", "Sine", "Saw"]
-LFO_MODES = ["LFO Off", "Tremelo", "Vibrato"]
+LFO_MODES = ["LFO Off", "Tremolo", "Vibrato"]
 
 # GPIO pins used:
 L0X_RESET_OUT = board.D4
@@ -301,12 +301,20 @@ def main():
             print(f" -> LFO #{lfoIndex}: {lfoMode}")
             displayLFOMode(display, lfoMode)
 
-            if lfoIndex == 2:
-                print("Testing treolo")
-                synth.setTremelo(20)
-            else:
-                print("Clearing treolo")
-                synth.clearTremelo()
+            if lfoIndex == 0:
+                synth.clearTremolo()
+                synth.clearVibrato()
+                # synth.setTremolo(0)
+                # synth.setVibrato(0)
+            elif lfoIndex == 1: # tremolo
+                synth.setTremolo(20)
+                synth.clearVibrato()
+                # synth.setVibrato(0)
+            elif lfoIndex == 2: # vibrato
+                synth.setVibrato(20)
+                synth.clearTremolo()
+                # synth.setTremolo(0)
+            
 
         # Get the two ranges, as available. 
         # (FIXME: Why is one always available, but the other is not? Different hardware.)
@@ -327,14 +335,10 @@ def main():
             midiNote = r1 / 4
             if midiNote > 120:
                 midiNote = 120
-            print(f"SIO: {r1} -> midiNote {midiNote} ")
 
             if chromatic:
                 midiNote = int(midiNote)
-
-            else: # "continuous", not chromatic; more "theremin-like"?
-                pass
-
+            print(f"{r1} -> {midiNote}")
 
             synth.play(midiNote)
             time.sleep(dSleepMilliseconds/100)
