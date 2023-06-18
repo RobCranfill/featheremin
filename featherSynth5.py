@@ -1,39 +1,42 @@
-# cran - Implement a class called FeatherSynth
-# 
-
+# A synthio-based implementation of FeatherSynth
+# For the Featheremin project - https://github.com/RobCranfill/featheremin
+#
 import audiopwmio
-import synthio
 import microcontroller
+import random
+import synthio
 import time
 import ulab.numpy as np
-import random
 
-SYNTH_RATE = 22050
-SAMPLE_RATE = 28000
-SAMPLE_SIZE = 512
+SYNTH_RATE    = 22050
+SAMPLE_RATE   = 28000
+SAMPLE_SIZE   =   512
 SAMPLE_VOLUME = 32000
 
-
+# A do-nothing 'BlockInput' for the LFOs
 LFO_NONE = 1.0
 
 class FeatherSynth:
     '''
         Our new synthio-based synth.
 
-        Can change waveform, envelope, add amplitude or frequecy LFO (tremolo or vibrato).
-        (^^^ some of that is TBD)
+        Can change waveform, TODO: envelope, and add tremolo or vibrato).
 
-        TODO: Triangle wave? Saw up vs saw down? (which one is it now?)
+        TODO: Triangle wave? Saw up vs saw down? (it is a rising sawtooth now.)
 
     '''
     def __init__(self, boardPinPWM: microcontroller.Pin) -> None:
 
-        # must prevent the PWMAudioOut object from being garbage collected:
+        # keeping a reference here prevents the PWMAudioOut object from being garbage collected.
         self._audio = audiopwmio.PWMAudioOut(boardPinPWM)
 
-        self._wave_sine = np.array(np.sin(np.linspace(0, 2*np.pi, SAMPLE_SIZE, endpoint=False)) * SAMPLE_VOLUME, dtype=np.int16)
+        self._WAVE_SINE = np.array(np.sin(np.linspace(0, 2*np.pi, SAMPLE_SIZE, endpoint=False)) * SAMPLE_VOLUME, dtype=np.int16)
+        
+        # this is a rising sawtooth, going from -SAMPLE_VOLUME down to +SAMPLE_VOLUME
+        # TODO: does a falling sawtooth sound different?
         self._wave_saw = np.linspace(SAMPLE_VOLUME, -SAMPLE_VOLUME, num=SAMPLE_SIZE, dtype=np.int16)
-        # print(f"wave_sine: {self._wave_sine}")
+
+        # print(f"wave_sine: {self._WAVE_SINE}")
         # print(f"wave_saw: {self._wave_saw}")
 
         env = synthio.Envelope(attack_time=0.1, decay_time=0.05, release_time=0.2, attack_level=1.0, sustain_level=0.8)
@@ -42,26 +45,26 @@ class FeatherSynth:
         # which may be what we want!
         self._synth = synthio.Synthesizer(sample_rate=SYNTH_RATE, envelope=env)
 
-        # This will cause the Note to use a 50% duty cycle square wave
-        # TODO: this probably shouldn't be the default - sine?
+        # TODO: Set the default waveform. Sine?
         #
-        self._waveform = None
-        self._waveform = self._wave_sine
+        # self._waveform = None # 'None' gets you a square wave.
+        self._waveform = self._WAVE_SINE
         
-        # These two LFOs persist; we can change them as we like, 
-        # and if we don't want to use them we just set the thing we currently are using to 'None'
-        # FIXME: that didn't work.
+        # These two LFOs persist, but can be modified on the fly.
         #
-        self._tremLFO = synthio.LFO(rate=LFO_NONE, waveform=self._wave_sine) # ok to re-use sine wave here?
-        self._tremCurrent = None
+        # TODO: should/can we use a smaller wave for the LFO envelopes?
+        self._tremLFO = synthio.LFO(rate=10, waveform=self._WAVE_SINE)
+        self._tremCurrent = LFO_NONE
 
-        self._vibLFO = synthio.LFO(rate=LFO_NONE, waveform=self._wave_sine) # ok to re-use sine wave here?
-        self._vibCurrent = None
+        self._vibLFO = synthio.LFO(rate=5, waveform=self._WAVE_SINE)
+        self._vibCurrent = LFO_NONE
 
         self._audio.play(self._synth)
 
+
+    # setters for waveform
     def setWaveformSine(self) -> None:
-        self._waveform = self._wave_sine
+        self._waveform = self._WAVE_SINE
 
     def setWaveformSaw(self) -> None:
         self._waveform = self._wave_saw
@@ -69,6 +72,8 @@ class FeatherSynth:
     def setWaveformSquare(self) -> None:
         self._waveform = None
     
+
+    # setters for tremolo and vibrato
     def setTremolo(self, tremFreq) -> None:
         self._tremLFO.rate = tremFreq
         self._tremCurrent = self._tremLFO
@@ -83,10 +88,10 @@ class FeatherSynth:
     def clearVibrato(self) -> None:
         self._vibCurrent = LFO_NONE
 
+
     '''
         Play a note.
-        "If waveform or envelope are None the synthesizer object's default waveform or envelope are used."
-        but what about tremolo or vibrato?
+        Uses the current values set for vibrato and tremolo.
     '''
     def play(self, midi_note_value):
 
@@ -94,9 +99,7 @@ class FeatherSynth:
 
         note = synthio.Note(synthio.midi_to_hz(midi_note_value), waveform=self._waveform, 
                             amplitude = self._tremCurrent, bend=self._vibCurrent)
-        
-        # note = synthio.Note(synthio.midi_to_hz(midi_note_value), waveform=self._waveform)
-        
+
         self._synth.release_all_then_press((note))
 
     def stop(self):
@@ -126,6 +129,7 @@ class FeatherSynth:
         while True:
             print(f"Playing #{i}...")
 
+            # test tremolo and vibrato
             if i%4 == 1:
                 self.clearTremolo()
                 self.clearVibrato()
