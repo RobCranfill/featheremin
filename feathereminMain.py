@@ -197,6 +197,10 @@ def displayLFOMode(disp, mode):
     disp.setTextArea3(mode)
 
 
+def clamp(num, min_value, max_value):
+   return max(min(num, max_value), min_value)
+
+
 # --------------------------------------------------
 # ------------------- begin main -------------------
 def main():
@@ -250,6 +254,8 @@ def main():
         position = -wheel.position
         if position != wheelPositionLast:
             wheelPositionLast = position
+            # TODO: even tho we limit the value we use, the hidden 'position' goes way out of bounds
+            # which works oddly. Fix!
             dSleepMilliseconds = max(min(position, 100), 0)
             # print(f"Wheel {position} - > d = {dSleepMilliseconds}")
             displayDelay(display, dSleepMilliseconds)
@@ -325,6 +331,9 @@ def main():
         # (FIXME: Why is one always available, but the other is not? Different hardware.)
         # TODO: if not in a mode that uses this range, don't read it?
         #
+        # r1 is the main ToF detector, used for main frequency.
+        # r2 is the secondary ToF, used for LFO freq, and maybe other things.
+        #
         r1 = tof_L0X.range
         r2 = 0
         if tof_L4CD.data_ready:
@@ -339,7 +348,8 @@ def main():
                 r2a = max(5, r2)
                 # print(f"r2: {r2} -> r2a = {r2a}")
 
-                # TODO: only set if r2 has *changed*?
+                # TODO: only set if r2 has *changed*? especially if we force the value to be an int.
+                
                 # if mode was changed, the "other" mode has already been cleared, so we are good to go.
                 if lfoIndex == 1: # tremolo 
                     synth.setTremolo(r2a) # map to 8-16?
