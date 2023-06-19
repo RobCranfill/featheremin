@@ -238,7 +238,7 @@ def main():
     displayChromaticMode(display, chromatic)
 
     # Instructions here?
-    display.setTextAreaR("You are\nmahvelous!")
+    display.setTextAreaR("Started!")
 
     wheelButtonHeld = False
 
@@ -323,23 +323,30 @@ def main():
 
         # Get the two ranges, as available. 
         # (FIXME: Why is one always available, but the other is not? Different hardware.)
+        # TODO: if not in a mode that uses this range, don't read it?
         #
         r1 = tof_L0X.range
         r2 = 0
         if tof_L4CD.data_ready:
+            
+            r2 = tof_L4CD.distance
 
-            r2 = max(0, tof_L4CD.distance - 10)
-            if r2 > 50:
-                r2 = 0
-            # print(f"r2 = {r2}")
+            # r2 seems to range from r2~=25 at 10 inches down to r2~=1.0 at a few mm.
+            # - We do get readings farther out, to like 50 or 60 at 2 feet, but will use the closer range.
+            # TODO: Use values 5-25 for now; tailor for trem/vib?
+            # sometimes there seem to be false signals of 0, so toss them out.
+            if r2 > 0 and r2 < 25:
+                r2a = max(5, r2)
+                # print(f"r2: {r2} -> r2a = {r2a}")
+
+                # TODO: only set if r2 has *changed*?
+                # if mode was changed, the "other" mode has already been cleared, so we are good to go.
+                if lfoIndex == 1: # tremolo 
+                    synth.setTremolo(r2a) # map to 8-16?
+                elif lfoIndex == 2:
+                    synth.setVibrato(r2a) # map to 4-10?
+
             # must do this to get another reading
-
-            # if mode was changed, the "other" mode has already been cleared, so we are good to go.
-            if lfoIndex == 1: # tremolo TODO: only set if r2 changed?
-                synth.setTremolo(r2)
-            elif lfoIndex == 2:
-                synth.setVibrato(r2)
-
             tof_L4CD.clear_interrupt()
 
         if r1 > 0 and r1 < 1000:
@@ -352,6 +359,9 @@ def main():
                 midiNote = int(midiNote)
 
             # print(f"{r1} -> {midiNote}")
+
+            # FIXME: this causes too much noise! synthio bug?
+            # display.setTextAreaR(f"r1={r1}\nr2={r2}")
 
             synth.play(midiNote)
             time.sleep(dSleepMilliseconds/100)
