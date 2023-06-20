@@ -39,22 +39,22 @@ Currently, the PWM pin (see the code for which one) goes to the headphone jack. 
 
 ## Things to Do
  * 3 modes? diatonic, chromatic, continuous
-   * no, diatonic isn't that useful actually
-   * or should I say it's too complicated, but could be fun in the future
-   * what key? major/minor (which minor??)
+   * diatonic isn't that useful actually
+   *   or should I say it's too complicated, but could be fun in the future
+   *   ie what key? major/minor? (*which* minor?!)
  * NEW: Synthio
    * Main ToF: pitch
    * 2nd ToF:
      * If LFO on: LFO freq
      * If LFO off:
-       * Env attack?
+       * Env? which param(s)?
        * Volume?
-       * Or these could be in the gesture cycle that selects LFO
+       * These could be in the gesture cycle that selects LFO
    * Gesture:
      * Up/down: waveform (square, saw, sine)
-     * L/R: Cycle: LFO OFF / LFO vol / LFO bend
+     * L/R: LFO mode: LFO OFF / LFO vol / LFO bend
    * Wheel: delay time
-   * Wheel push: CHROMATIC/CONTINUOUS !
+   * Wheel push: chromatic/continuous/other?
 
  * What can I control?
    * NEW: synthio params:
@@ -73,11 +73,12 @@ Currently, the PWM pin (see the code for which one) goes to the headphone jack. 
 
  * Display
    * Some small LCD
+
  * Controls
    * ToF
    * Gesture
    * Rotary encoder
-   * Hardware volume
+   * Hardware volume?
    * Kill switch?
  * Future
    * Stereo

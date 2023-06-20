@@ -102,11 +102,44 @@ class FeatherSynth:
 
         self._synth.release_all_then_press((note))
 
+    # we'd rather create the notes once, then change their frequency. or does it matter?
+    # probably does!
+    #
+    # takes frequencies (in Hz) not MIDI notes.
+    #
+    def startDrone(self, f1, f2):
+
+        self._n1 = synthio.Note(f1, waveform=self._waveform, 
+                    amplitude = 1, bend=1)
+
+        self._n2 = synthio.Note(f2, waveform=self._waveform, 
+                    amplitude = 1, bend=1)
+
+        self._synth.release_all_then_press((self._n1, self._n2))
+
+    def drone(self, f1, f2):
+        self._n1.frequency = f1
+        self._n2.frequency = f2
+
+    def stopDrone(self):
+        self._synth.release_all()
+        self._n1 = None
+        self._n2 = None
+
     def stop(self):
         self._synth.release_all()
 
     def test(self):
         print("FeatherSynth5.test() with GC fix...")
+
+        # test drone mode
+        print("Testing drone mode....")
+        self.startDrone(2000, 5000)
+        for f1 in range(2000, 10000, 10):
+            self.drone(f1, 10000-f1)
+            # print(f"f={f1}")
+            time.sleep(0.01)
+        self.stopDrone()
 
         # # create a sawtooth sort of 'song', like a siren, with non-integer midi notes
         # start_note = 65

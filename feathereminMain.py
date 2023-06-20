@@ -29,7 +29,7 @@ import featherSynth5
 #     SINE = 2
 #     SAW = 3
 WAVEFORM_TYPES = ["Square", "Sine", "Saw"]
-LFO_MODES = ["LFO Off", "Tremolo", "Vibrato"]
+LFO_MODES = ["LFO Off", "Tremolo", "Vibrato", "Drone"]
 lfo_tremolo_freq = 15
 lfo_vibrato_freq = 4
 
@@ -196,7 +196,6 @@ def displayWaveformName(disp, name):
 def displayLFOMode(disp, mode):
     disp.setTextArea3(mode)
 
-
 def clamp(num, min_value, max_value):
    return max(min(num, max_value), min_value)
 
@@ -216,8 +215,6 @@ def main():
     #
     tof_L0X, tof_L4CD, gestureSensor, display, amp, wheel, wheelButton, wheelLED = init_hardware()
 
-
-    # new synthio !
     synth = featherSynth5.FeatherSynth(AUDIO_OUT_PIN)
 
     waveIndex = 0
@@ -225,7 +222,6 @@ def main():
     displayWaveformName(display, waveName)
     synth.setWaveformSquare()
 
-    # lfo?
     lfoIndex = 0
     lfoMode = LFO_MODES[lfoIndex]
     displayLFOMode(display, lfoMode)
@@ -249,14 +245,18 @@ def main():
     # ==== Main loop ===============================================================
     while True:
 
+        # TODO: tidy up all this gesture-handling stuff
+
         # Rotary encoder wheel.
         # negate the position to make clockwise rotation positive
         position = -wheel.position
         if position != wheelPositionLast:
             wheelPositionLast = position
-            # TODO: even tho we limit the value we use, the hidden 'position' goes way out of bounds
-            # which works oddly. Fix!
-            dSleepMilliseconds = max(min(position, 100), 0)
+
+            # FIDME: even tho we limit the value we *use*, 
+            # the hidden 'position' goes way out of bounds which works oddly. Fix!
+            dSleepMilliseconds = clamp(position, 0, 100)
+
             # print(f"Wheel {position} - > d = {dSleepMilliseconds}")
             displayDelay(display, dSleepMilliseconds)
 
@@ -315,17 +315,20 @@ def main():
             if lfoIndex == 0:
                 synth.clearTremolo()
                 synth.clearVibrato()
-                # synth.setTremolo(0)
-                # synth.setVibrato(0)
+
             elif lfoIndex == 1: # tremolo
                 synth.setTremolo(20)
                 synth.clearVibrato()
-                # synth.setVibrato(0)
+
             elif lfoIndex == 2: # vibrato
                 synth.setVibrato(20)
                 synth.clearTremolo()
-                # synth.setTremolo(0)
-            
+
+            elif lfoIndex == 3: # dual/drone
+                synth.clearVibrato()
+                synth.clearTremolo()
+                synth.startDrone(1000, 1100)
+
 
         # Get the two ranges, as available. 
         # (FIXME: Why is one always available, but the other is not? Different hardware.)
@@ -337,7 +340,7 @@ def main():
         r1 = tof_L0X.range
         r2 = 0
         if tof_L4CD.data_ready:
-            
+
             r2 = tof_L4CD.distance
 
             # r2 seems to range from r2~=25 at 10 inches down to r2~=1.0 at a few mm.
@@ -360,6 +363,14 @@ def main():
             tof_L4CD.clear_interrupt()
 
         if r1 > 0 and r1 < 1000:
+
+            # drone mode
+            if lfoIndex == 3:
+                f1 = clamp(r1*100, 1000, 20000)
+                f2 = clamp(r2*100, 1000, 20000)
+                print(f"drone: {f1} {f2}")
+                synth.drone(f1, f2)
+                pass
 
             midiNote = r1 / 4
             if midiNote > 120:
