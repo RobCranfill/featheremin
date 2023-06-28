@@ -20,7 +20,7 @@ import adafruit_max9744
 from adafruit_apds9960.apds9960 import APDS9960
 from adafruit_seesaw import seesaw, rotaryio, digitalio, neopixel
 
-import featherSynth6
+import featherSynth5
 
 # No 'enum' in circuitpython! :-(
 # from enum import Enum
@@ -40,13 +40,13 @@ L0X_RESET_OUT = board.D4
 # AUDIO_OUT_PIN = board.D5    
 
 # for I2S audio out
-I2S_BIT=board.D9
-I2S_WORD=board.D10
-I2S_DATA=board.D11
+AUDIO_OUT_I2S_BIT  = board.D9
+AUDIO_OUT_I2S_WORD = board.D10
+AUDIO_OUT_I2S_DATA = board.D11
 
-
-TFT_DISPLAY_CS = board.A2
-TFT_DISPLAY_DC = board.A0
+# Display
+TFT_DISPLAY_CS    = board.A2
+TFT_DISPLAY_DC    = board.A0
 TFT_DISPLAY_RESET = board.A1
 
 L4CD_ALTERNATE_I2C_ADDR = 0x31
@@ -219,13 +219,16 @@ def main():
     supervisor.runtime.autoreload = False  # CirPy 8 and above
     print("supervisor.runtime.autoreload = False")
 
-
     # Initialize the hardware, dying if something critical is missing.
     #
     tof_L0X, tof_L4CD, gestureSensor, display, amp, wheel, wheelButton, wheelLED = init_hardware()
 
+    # My "synthezier" object that does the stuff that I need.
+    #
     # synth = featherSynth5.FeatherSynth(AUDIO_OUT_PIN)
-    synth = featherSynth6.FeatherSynth(bit_clock=I2S_BIT, word_select=I2S_WORD, data=I2S_DATA)
+    synth = featherSynth5.FeatherSynth(
+        i2s_bit_clock=AUDIO_OUT_I2S_BIT, i2s_word_select=AUDIO_OUT_I2S_WORD, i2s_data=AUDIO_OUT_I2S_DATA)
+    synth.setVolume(0.1)
 
     waveIndex = 0
     waveName  = WAVEFORM_TYPES[waveIndex]

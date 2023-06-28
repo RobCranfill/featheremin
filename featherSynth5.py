@@ -17,6 +17,7 @@ SYNTH_RATE    = 22050
 SAMPLE_RATE   = 28000
 SAMPLE_SIZE   =   512
 SAMPLE_VOLUME = 32000
+BUFFER_SIZE   =  2048
 
 # A do-nothing 'BlockInput' for the LFOs
 LFO_NONE = 1.0
@@ -30,7 +31,29 @@ class FeatherSynth:
         TODO: Triangle wave? Saw up vs saw down? (it is a rising sawtooth now.)
 
     '''
-    def __init__(self, p_bit_clock, p_word_select, p_data) -> None:
+    def __init__(self, i2s_bit_clock, i2s_word_select, i2s_data) -> None:
+
+        # keeping a reference here prevents the PWMAudioOut object from being garbage collected.
+
+        # OLD PWM CODE
+        # We used to pass in just one param, the pin to use for PWM.
+        # I would have kept that if Python had allowed multiple constructors, but it doesn't.
+        # :-(
+        # self._audio = audiopwmio.PWMAudioOut(boardPinPWM)
+
+        self._audio = audiobusio.I2SOut(i2s_bit_clock, i2s_word_select, i2s_data)
+
+        # As per https://github.com/todbot/circuitpython-synthio-tricks use a mixer:
+        self._mixer = audiomixer.Mixer(channel_count=1, sample_rate=SYNTH_RATE, buffer_size=BUFFER_SIZE)
+        self._mixer.voice[0].level = 0.1  # 10% volume to start seems plenty
+
+        # TODO: if envelope not given, "the default envelope, instantly turns notes on and off"
+        # which may be what we want!
+        env = synthio.Envelope(attack_time=0.1, decay_time=0.05, release_time=0.2, attack_level=1.0, sustain_level=0.8)
+        self._synth = synthio.Synthesizer(sample_rate=SYNTH_RATE, envelope=env)
+
+        self._audio.play(self._mixer)
+        self._mixer.voice[0].play(self._synth)
 
 
         # Build some waveforms
@@ -44,13 +67,8 @@ class FeatherSynth:
         # print(f"wave_sine: {self._WAVE_SINE}")
         # print(f"wave_saw: {self._WAVE_SAW}")
 
-        env = synthio.Envelope(attack_time=0.1, decay_time=0.05, release_time=0.2, attack_level=1.0, sustain_level=0.8)
 
-        # TODO: if envelope not given, "the default envelope, instantly turns notes on and off"
-        # which may be what we want!
-        self._synth = synthio.Synthesizer(sample_rate=SYNTH_RATE, envelope=env)
-
-        # TODO: Set the default waveform. Sine?
+        # TODO: Set the default waveform - sine?
         #
         # self._waveform = None # 'None' gets you a square wave.
         self._waveform = self._WAVE_SINE
@@ -67,17 +85,6 @@ class FeatherSynth:
         self._drone1 = None
         self._drone2 = None
 
-
-        # keeping a reference here prevents the PWMAudioOut object from being garbage collected.
-        # self._audio = audiopwmio.PWMAudioOut(boardPinPWM)
-        self._audio = audiobusio.I2SOut(bit_clock=board.D9, word_select=board.D10, data=board.D11)
-
-        # As per https://github.com/todbot/circuitpython-synthio-tricks use a mixer:
-        self._mixer = audiomixer.Mixer(channel_count=1, sample_rate=22050, buffer_size=2048)
-
-        self._audio.play(self._mixer)
-        self._mixer.voice[0].level = 0.1  # 10% volume to start seems plenty
-        self._mixer.voice[0].play(self._synth)
 
     def setVolume(self, level):
         self._mixer.voice[0].level = level
@@ -159,9 +166,12 @@ class FeatherSynth:
         print("FeatherSynth5.test() with GC fix...")
 
         # test drone mode
-        for i in range(2):
-            print("Testing drone mode....")
+        v = 0.1
+        for i in range(4, 0, -1):
+            print(f"Testing drone mode #{i}....")
             f1 = 300
+            self.setVolume(v)
+            v = v + 0.1
             self.startDrone(f1, f1)
             for delta in range(100):
                 self.drone(f1, f1+delta)
