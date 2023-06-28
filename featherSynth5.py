@@ -1,7 +1,12 @@
-# A synthio-based implementation of FeatherSynth
+# A synthio-based implementation of FeatherSynth.
+# Uses I2S.
+# TODO: Parameterize the audio object.
+#
 # For the Featheremin project - https://github.com/RobCranfill/featheremin
 #
-import audiopwmio
+import audiobusio
+import audiomixer
+import board
 import microcontroller
 import random
 import synthio
@@ -20,27 +25,27 @@ class FeatherSynth:
     '''
         Our new synthio-based synth.
 
-        Can change waveform, TODO: envelope, and add tremolo or vibrato).
+        Can change waveform, TODO: envelope, and add tremolo or vibrato.
 
         TODO: Triangle wave? Saw up vs saw down? (it is a rising sawtooth now.)
 
     '''
-    def __init__(self, boardPinPWM: microcontroller.Pin) -> None:
+    def __init__(self, p_bit_clock, p_word_select, p_data) -> None:
 
-        # keeping a reference here prevents the PWMAudioOut object from being garbage collected.
-        self._audio = audiopwmio.PWMAudioOut(boardPinPWM)
 
+        # Build some waveforms
+        #
         self._WAVE_SINE = np.array(np.sin(np.linspace(0, 2*np.pi, SAMPLE_SIZE, endpoint=False)) * SAMPLE_VOLUME, dtype=np.int16)
-        
+
         # this is a rising sawtooth, going from -SAMPLE_VOLUME down to +SAMPLE_VOLUME
         # TODO: does a falling sawtooth sound different?
-        self._wave_saw = np.linspace(SAMPLE_VOLUME, -SAMPLE_VOLUME, num=SAMPLE_SIZE, dtype=np.int16)
+        self._WAVE_SAW = np.linspace(SAMPLE_VOLUME, -SAMPLE_VOLUME, num=SAMPLE_SIZE, dtype=np.int16)
 
         # print(f"wave_sine: {self._WAVE_SINE}")
-        # print(f"wave_saw: {self._wave_saw}")
+        # print(f"wave_saw: {self._WAVE_SAW}")
 
         env = synthio.Envelope(attack_time=0.1, decay_time=0.05, release_time=0.2, attack_level=1.0, sustain_level=0.8)
-        
+
         # TODO: if envelope not given, "the default envelope, instantly turns notes on and off"
         # which may be what we want!
         self._synth = synthio.Synthesizer(sample_rate=SYNTH_RATE, envelope=env)
@@ -49,7 +54,7 @@ class FeatherSynth:
         #
         # self._waveform = None # 'None' gets you a square wave.
         self._waveform = self._WAVE_SINE
-        
+
         # These two LFOs persist, but can be modified on the fly.
         #
         # TODO: should/can we use a smaller wave for the LFO envelopes?
@@ -59,19 +64,34 @@ class FeatherSynth:
         self._vibLFO = synthio.LFO(rate=5, waveform=self._WAVE_SINE)
         self._vibCurrent = LFO_NONE
 
-        self._audio.play(self._synth)
+        self._drone1 = None
+        self._drone2 = None
 
+
+        # keeping a reference here prevents the PWMAudioOut object from being garbage collected.
+        # self._audio = audiopwmio.PWMAudioOut(boardPinPWM)
+        self._audio = audiobusio.I2SOut(bit_clock=board.D9, word_select=board.D10, data=board.D11)
+
+        # As per https://github.com/todbot/circuitpython-synthio-tricks use a mixer:
+        self._mixer = audiomixer.Mixer(channel_count=1, sample_rate=22050, buffer_size=2048)
+
+        self._audio.play(self._mixer)
+        self._mixer.voice[0].level = 0.1  # 10% volume to start seems plenty
+        self._mixer.voice[0].play(self._synth)
+
+    def setVolume(self, level):
+        self._mixer.voice[0].level = level
 
     # setters for waveform
     def setWaveformSine(self) -> None:
         self._waveform = self._WAVE_SINE
 
     def setWaveformSaw(self) -> None:
-        self._waveform = self._wave_saw
+        self._waveform = self._WAVE_SAW
 
     def setWaveformSquare(self) -> None:
         self._waveform = None
-    
+
 
     # setters for tremolo and vibrato
     def setTremolo(self, tremFreq) -> None:
@@ -97,7 +117,7 @@ class FeatherSynth:
 
         # print(f"note {midi_note_value}")
 
-        note = synthio.Note(synthio.midi_to_hz(midi_note_value), waveform=self._waveform, 
+        note = synthio.Note(synthio.midi_to_hz(midi_note_value), waveform=self._waveform,
                             amplitude = self._tremCurrent, bend=self._vibCurrent)
 
         self._synth.release_all_then_press((note))
@@ -108,39 +128,52 @@ class FeatherSynth:
     # takes frequencies (in Hz) not MIDI notes.
     #
     def startDrone(self, f1, f2):
-
-        self._n1 = synthio.Note(f1, waveform=self._waveform, 
-                    amplitude = 1, bend=1)
-
-        self._n2 = synthio.Note(f2, waveform=self._waveform, 
-                    amplitude = 1, bend=1)
-
-        self._synth.release_all_then_press((self._n1, self._n2))
+        self._drone1 = synthio.Note(f1, waveform=self._waveform, amplitude=1, bend=1)
+        self._drone2 = synthio.Note(f2, waveform=self._waveform, amplitude=1, bend=1)
+        self._synth.release_all_then_press((self._drone1, self._drone2))
 
     def drone(self, f1, f2):
-        self._n1.frequency = f1
-        self._n2.frequency = f2
+        if self._drone1 == None or self._drone2 == None:
+            print("must start drone!")
+            return
+        # print(f"drone {f1}, {f2}")
+        self._drone1.frequency = f1
+        self._drone2.frequency = f2
 
     def stopDrone(self):
         self._synth.release_all()
-        self._n1 = None
-        self._n2 = None
+        self._drone1 = None
+        self._drone2 = None
 
     def stop(self):
         self._synth.release_all()
+
+    '''
+        Can/should we do this automatically?
+        see https://docs.circuitpython.org/en/latest/docs/design_guide.html#lifetime-and-contextmanagers
+    '''
+    def deinit(self):
+        self._audio.deinit()
 
     def test(self):
         print("FeatherSynth5.test() with GC fix...")
 
         # test drone mode
-        print("Testing drone mode....")
-        self.startDrone(2000, 5000)
-        for f1 in range(2000, 10000, 10):
-            self.drone(f1, 10000-f1)
-            # print(f"f={f1}")
-            time.sleep(0.01)
-        self.stopDrone()
-
+        for i in range(2):
+            print("Testing drone mode....")
+            f1 = 300
+            self.startDrone(f1, f1)
+            for delta in range(100):
+                self.drone(f1, f1+delta)
+                time.sleep(0.02)
+            for delta in range(100):
+                self.drone(f1, f1-delta)
+                time.sleep(0.02)
+            self.stopDrone()
+        print("DONE Testing drone mode....")
+        self.deinit()
+        return
+    
         # # create a sawtooth sort of 'song', like a siren, with non-integer midi notes
         # start_note = 65
         # song_notes = np.arange(0, 20, 0.1)
@@ -152,7 +185,7 @@ class FeatherSynth:
         # song_notes = np.arange(0, 20, 1)
         # song_notes = np.concatenate((song_notes, np.arange(20, 0, -1)), axis=0)
         # delay = 0.2
-        
+
         # after 'tiny lfo song' by @todbot
         start_note = 65
         song_notes = (+3, 0, -2, -3, -2, 0, -2, -3)

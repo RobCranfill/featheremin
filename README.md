@@ -1,9 +1,6 @@
 # featheramin
 A Feather-based theramin!
 
-This project may or may not become a useful thing. 
-I'm just having fun playing around with the Feather and its various add-ons.
-
 ## Hardware
 So far, (almost) all from Adafruit!
  * Feather RP2040 microcontroller (Adafruit product ID 4884)
@@ -16,7 +13,7 @@ So far, (almost) all from Adafruit!
  * a big breadboard and a few wires to put them together.
 
 ## Software required
- * Adafruit CircuitPython 8 (version 8.2.0b1 used)
+ * Adafruit CircuitPython 8.2.something - still in RC
  * adafruit_vl53l0x.mpy
  * adafruit_apds9960 support lib (3 files)
 

@@ -3,7 +3,7 @@
 """
 import array
 import audiocore
-import audiopwmio
+# import audiopwmio
 import board
 import busio
 import digitalio as feather_digitalio
@@ -20,7 +20,7 @@ import adafruit_max9744
 from adafruit_apds9960.apds9960 import APDS9960
 from adafruit_seesaw import seesaw, rotaryio, digitalio, neopixel
 
-import featherSynth5
+import featherSynth6
 
 # No 'enum' in circuitpython! :-(
 # from enum import Enum
@@ -35,7 +35,16 @@ lfo_vibrato_freq = 4
 
 # GPIO pins used:
 L0X_RESET_OUT = board.D4
-AUDIO_OUT_PIN = board.D5    # for PWM output
+
+# for PWM audio output
+# AUDIO_OUT_PIN = board.D5    
+
+# for I2S audio out
+I2S_BIT=board.D9
+I2S_WORD=board.D10
+I2S_DATA=board.D11
+
+
 TFT_DISPLAY_CS = board.A2
 TFT_DISPLAY_DC = board.A0
 TFT_DISPLAY_RESET = board.A1
@@ -215,7 +224,8 @@ def main():
     #
     tof_L0X, tof_L4CD, gestureSensor, display, amp, wheel, wheelButton, wheelLED = init_hardware()
 
-    synth = featherSynth5.FeatherSynth(AUDIO_OUT_PIN)
+    # synth = featherSynth5.FeatherSynth(AUDIO_OUT_PIN)
+    synth = featherSynth6.FeatherSynth(bit_clock=I2S_BIT, word_select=I2S_WORD, data=I2S_DATA)
 
     waveIndex = 0
     waveName  = WAVEFORM_TYPES[waveIndex]
@@ -367,7 +377,10 @@ def main():
             # drone mode
             if lfoIndex == 3:
                 f1 = clamp(r1*100, 1000, 20000)
-                f2 = clamp(r2*100, 1000, 20000)
+                
+                # f2 = clamp(r2*100, 1000, 20000)
+                f2 = f1 - r2
+                
                 print(f"drone: {f1} {f2}")
                 synth.drone(f1, f2)
                 pass
