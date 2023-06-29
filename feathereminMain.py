@@ -113,24 +113,25 @@ def init_hardware() -> list(adafruit_vl53l0x.VL53L0X,   # 1st ToF sensor
             print(f"Found VL53L4CD at default address; setting to {hex(L4CD_ALTERNATE_I2C_ADDR)}...")
             L4CD.set_address(L4CD_ALTERNATE_I2C_ADDR)  # address assigned should NOT be already in use
             print("VL53L4CD set_address OK")
+
+            # # set non-default values?
+            L4CD.inter_measurement = 0
+            L4CD.timing_budget = 100
+            L4CD.start_ranging()
+
+            # print("--------------------")
+            # print("VL53L4CD:")
+            # model_id, module_type = L4CD.model_info
+            # print(f"    Model ID: 0x{model_id:0X}")
+            # print(f"    Module Type: 0x{module_type:0X}")
+            # print(f"    Timing Budget: {L4CD.timing_budget}")
+            # print(f"    Inter-Measurement: {L4CD.inter_measurement}")
+            # print("--------------------")
+            print("VL53L4CD init OK")
         except:
             print("**** No VL53L4CD?")
             L4CD = None
-    finally:
-        # # set non-default values?
-        L4CD.inter_measurement = 0
-        L4CD.timing_budget = 100
-        L4CD.start_ranging()
 
-        # print("--------------------")
-        # print("VL53L4CD:")
-        # model_id, module_type = L4CD.model_info
-        # print(f"    Model ID: 0x{model_id:0X}")
-        # print(f"    Module Type: 0x{module_type:0X}")
-        # print(f"    Timing Budget: {L4CD.timing_budget}")
-        # print(f"    Inter-Measurement: {L4CD.inter_measurement}")
-        # print("--------------------")
-        print("VL53L4CD init OK")
 
     # ----------------- VL53L0X time-of-flight sensor, part 2
     # Turn L0X back on and instantiate its object
@@ -285,8 +286,12 @@ def main():
 
         changedWaveform = False
         lfoChanged = False
-        gestureValue = gestureSensor.gesture()
+        
+        gestureValue = 0
+        if gestureSensor:
+            gestureValue = gestureSensor.gesture()
         # print(f"gestureValue: {gestureValue}")
+
         if gestureValue == 1: # down
             waveIndex = waveIndex - 1
             if waveIndex < 0:
@@ -352,7 +357,7 @@ def main():
         #
         r1 = tof_L0X.range
         r2 = 0
-        if tof_L4CD.data_ready:
+        if tof_L4CD and tof_L4CD.data_ready:
 
             r2 = tof_L4CD.distance
 
