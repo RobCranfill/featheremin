@@ -1,26 +1,28 @@
 # featheramin
-A Feather-based theramin!
+A microcontroller-based theremin using CicuitPython and two LiDAR range detectors. 
 
 ## Hardware
-So far, (almost) all from Adafruit!
+So far, (almost) all from Adafruit. I love Adafruit!
  * Feather RP2040 microcontroller (Adafruit product ID 4884)
  * VL53L0X Time-of-Flight distance sensor (Adafruit product ID 3317)
  * VL53L4CD Time-of-Flight distance sensor (Adafruit product ID 5396)
  * APDS-9960 proximity/gesture sensor
- * 1 watt audio amplifier and speaker...
- *  ...or 20 watt audio amp with external speaker
- * A TRS 1/8" headphone connector (that's stero but so far this thing is mono)
- * a big breadboard and a few wires to put them together.
+ * 2.2" TFT display
+ * I'm still trying to figure out how to amplify this. I've used:
+   * 1 watt STEMMA audio amplifier with speaker
+   * 20 watt audio amp with external speaker
+   * 3 watt I2S amp (the current configuration, as I2S gives better sound)
+ * A TRS 1/8" headphone connector (that's stereo but so far this thing is mono)
+ * a big breadboard and miscellaneous other stuff to put them together.
 
 ## Software required
- * Adafruit CircuitPython 8.2.something - still in RC
+ * Adafruit CircuitPython 8.2.something (currently Release Candidate 1)
  * adafruit_vl53l0x.mpy
  * adafruit_apds9960 support lib (3 files)
 
 ## Dev environment
-So far this code is written in CircuitPython, but I may eventually want/need to port it to C. We shall see, ha ha.
 
-I have been using Visual Studio Code for my IDE but I don't think that matters.
+I have been using Visual Studio Code for my IDE but I don't think that matters. I have the CircuitPython extension installed, which is nice, but it is only somewhat functional as I also have my VS Code running in WSL2, which breaks some things. YMMV.
 
 Note: The main code is in a file called "feathereminMain.py"; if you simply "include" this in your main.py, it will run. This is how I test various other modules, by incudling the code I want to run/test in main.py, rather than vaving to rename entire files to "main.py".
 
