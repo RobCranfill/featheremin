@@ -162,22 +162,22 @@ class FeatherSynth:
     def deinit(self):
         self._audio.deinit()
 
-    def test(self):
+    def test(self, n):
         print("FeatherSynth5.test() with GC fix...")
 
         # test drone mode
         v = 0.1
-        for i in range(4, 0, -1):
+        for i in range(n, 0, -1):
             print(f"Testing drone mode #{i}....")
             f1 = 300
             self.setVolume(v)
             v = v + 0.1
             self.startDrone(f1, f1)
-            for delta in range(100):
+            for delta in range(-100, 100):
                 self.drone(f1, f1+delta)
                 time.sleep(0.02)
-            for delta in range(100):
-                self.drone(f1, f1-delta)
+            for delta in range(100, -100, -1):
+                self.drone(f1, f1+delta)
                 time.sleep(0.02)
             self.stopDrone()
         print("DONE Testing drone mode....")

@@ -25,7 +25,7 @@ tft_cs = board.A2
 tft_dc = board.A0
 
 display_bus = displayio.FourWire(spi, command=tft_dc, chip_select=tft_cs, reset=board.A1)
-display = adafruit_ili9341.ILI9341(display_bus, width=320, height=240)
+display = adafruit_ili9341.ILI9341(display_bus, width=320, height=240, rotation=180) # for Featheremin
 
 # Make the display context
 splash = displayio.Group()
@@ -63,6 +63,6 @@ print("Test done!")
 
 # if the code stops, the display gets erased. Why?
 # so do this to wait forever:
-while True:
-    pass
+# while True:
+#     pass
 
