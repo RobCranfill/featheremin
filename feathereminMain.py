@@ -15,7 +15,7 @@ import sys
 # Adafruit hardware libraries - www.adafruit.com
 import feathereminDisplay9341
 import adafruit_vl53l0x
-import adafruit_vl53l4cd
+# import adafruit_vl53l4cd
 import adafruit_max9744
 from adafruit_apds9960.apds9960 import APDS9960
 from adafruit_seesaw import seesaw, rotaryio, digitalio, neopixel
@@ -34,7 +34,9 @@ lfo_tremolo_freq = 15
 lfo_vibrato_freq = 4
 
 # GPIO pins used:
-L0X_RESET_OUT = board.D4
+# The GPIO pin we use to turn the 'primary' ("A") ToF sensor off,
+# so we can re-program the address of the secondary one.
+L0X_A_RESET_OUT = board.D4
 
 # for PWM audio output
 # AUDIO_OUT_PIN = board.D5    
@@ -49,7 +51,9 @@ TFT_DISPLAY_CS    = board.A2
 TFT_DISPLAY_DC    = board.A0
 TFT_DISPLAY_RESET = board.A1
 
-L4CD_ALTERNATE_I2C_ADDR = 0x31
+# L4CD_ALTERNATE_I2C_ADDR = 0x31
+# The L0X defaults to I2C 0x29; we have two, one of which we will re-assign to this address.
+L0X_B_ALTERNATE_I2C_ADDR = 0x31
 
 INITIAL_AMP_VOLUME = 10 # 25 is max for 20W amp and 3W 4 ohm speaker with 12v to amp.
 
@@ -61,14 +65,14 @@ def showI2Cbus():
         i2c.unlock()
 
 
-def init_hardware() -> list(adafruit_vl53l0x.VL53L0X,   # 1st ToF sensor
-                            adafruit_vl53l4cd.VL53L4CD, # 2nd ToF sensor
-                            APDS9960,                   # gesture sensor
+def init_hardware() -> list(adafruit_vl53l0x.VL53L0X,    # 'A' ToF sensor
+                            adafruit_vl53l0x.VL53L0X,    # 'B' ToF sensor
+                            APDS9960,                    # gesture sensor
                             feathereminDisplay9341.FeathereminDisplay9341, # our display object
-                            adafruit_max9744.MAX9744,   # amplifier, or None
+                            adafruit_max9744.MAX9744,    # big amplifier, or None
                             rotaryio.IncrementalEncoder, # rotary encoder
-                            digitalio.DigitalIO,        # pushbutton in rotary encoder
-                            neopixel.NeoPixel           # neopixel in rotary encoder
+                            digitalio.DigitalIO,         # pushbutton in rotary encoder
+                            neopixel.NeoPixel            # neopixel in rotary encoder
                             ):
     
     """Initialize various hardware items.
@@ -90,34 +94,36 @@ def init_hardware() -> list(adafruit_vl53l0x.VL53L0X,   # 1st ToF sensor
 
     # ----------------- VL53L0X time-of-flight sensor 
     # We will finish setting this sensor up 
-    # *after* we turn it off an init the other ToF sensor.
+    # *after* we turn it off and init the 'secondary' ToF sensor.
     
     # Turn off the ToF sensor - take XSHUT pin low
-    print("Turning off VL53L0X...")
-    L0X_reset = feather_digitalio.DigitalInOut(L0X_RESET_OUT)
-    L0X_reset.direction = feather_digitalio.Direction.OUTPUT
-    L0X_reset.value = 0
+    print("Turning off primary VL53L0X...")
+    L0X_A_reset = feather_digitalio.DigitalInOut(L0X_A_RESET_OUT)
+    L0X_A_reset.direction = feather_digitalio.Direction.OUTPUT
+    L0X_A_reset.value = 0
     # VL53L0X sensor is now turned off
+    showI2Cbus()
+
 
     # ----------------- VL53L4CD time-of-flight sensor
-    # L4CD ToF
+    # 'Secondary' ToF - the one DIDN'T wire the XSHUT pin to.
     # First, see if it's there with the new address (left over from a previous run).
     # If so, we don't need to re-assign it.
     try:
-        L4CD = adafruit_vl53l4cd.VL53L4CD(i2c, address=L4CD_ALTERNATE_I2C_ADDR)
-        print(f"Found VL53L4CD at {hex(L4CD_ALTERNATE_I2C_ADDR)}; OK")
+        L0X_B = adafruit_vl53l0x.VL53L0X(i2c, address=L0X_B_ALTERNATE_I2C_ADDR)
+        print(f"Found secondary VL53L0X at {hex(L0X_B_ALTERNATE_I2C_ADDR)}; OK")
     except:
-        print(f"Did not find VL53L4CD at {hex(L4CD_ALTERNATE_I2C_ADDR)}, trying default....")
+        print(f"Did not find secondary VL53L0X at {hex(L0X_B_ALTERNATE_I2C_ADDR)}, trying default....")
         try:
-            L4CD = adafruit_vl53l4cd.VL53L4CD(i2c)
-            print(f"Found VL53L4CD at default address; setting to {hex(L4CD_ALTERNATE_I2C_ADDR)}...")
-            L4CD.set_address(L4CD_ALTERNATE_I2C_ADDR)  # address assigned should NOT be already in use
-            print("VL53L4CD set_address OK")
+            L0X_B = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
+            print(f"Found VL53L0X at default address; setting to {hex(L0X_B_ALTERNATE_I2C_ADDR)}...")
+            L0X_B.set_address(L0X_B_ALTERNATE_I2C_ADDR)  # address assigned should NOT be already in use
+            print("VL53L0X set_address OK")
 
             # # set non-default values?
-            L4CD.inter_measurement = 0
-            L4CD.timing_budget = 100
-            L4CD.start_ranging()
+            L0X_B.inter_measurement = 0
+            L0X_B.timing_budget = 100
+            L0X_B.start_ranging()
 
             # print("--------------------")
             # print("VL53L4CD:")
@@ -127,24 +133,25 @@ def init_hardware() -> list(adafruit_vl53l0x.VL53L0X,   # 1st ToF sensor
             # print(f"    Timing Budget: {L4CD.timing_budget}")
             # print(f"    Inter-Measurement: {L4CD.inter_measurement}")
             # print("--------------------")
-            print("VL53L4CD init OK")
+            print("secondary VL53L0X init OK")
         except:
-            print("**** No VL53L4CD?")
-            L4CD = None
+            print("**** No secondary VL53L0X?")
+            L0X_B = None
 
 
     # ----------------- VL53L0X time-of-flight sensor, part 2
     # Turn L0X back on and instantiate its object
     print("Turning VL53L0X back on...")
-    L0X_reset.value = 1
+    L0X_A_reset.value = 1
     try:
-        L0X = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
-        print("VL53L0X init OK")
+        L0X_A = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
+        print("'Primary' VL53L0X init OK")
     except:
-        print("**** No VL53L0X? Continuing....")
+        print("**** No primary VL53L0X? Continuing....")
 
     # Show bus again?
-    # showI2Cbus()
+    showI2Cbus()
+
 
     # ----------------- APDS9960 gesture/proximity/color sensor
     apds = None
@@ -190,9 +197,10 @@ def init_hardware() -> list(adafruit_vl53l0x.VL53L0X,   # 1st ToF sensor
     pixel.fill(0x004000) # green for go!
     print("Rotary encoder init OK")
 
-
     print("\ninit_hardware OK!\n")
-    return L0X, L4CD, apds, display, amp, encoder, wheel_button, pixel
+    
+    return L0X_A, L0X_B, apds, display, amp, encoder, wheel_button, pixel
+
 
 def displayChromaticMode(disp, chromaticFlag):
     disp.setTextAreaL("Chromatic" if chromaticFlag else "Continuous")
@@ -222,7 +230,7 @@ def main():
 
     # Initialize the hardware, dying if something critical is missing.
     #
-    tof_L0X, tof_L4CD, gestureSensor, display, amp, wheel, wheelButton, wheelLED = init_hardware()
+    tof_A, tof_B, gestureSensor, display, amp, wheel, wheelButton, wheelLED = init_hardware()
 
     # My "synthezier" object that does the stuff that I need.
     #
@@ -243,7 +251,7 @@ def main():
     dSleepMilliseconds = 0
     displayDelay(display, dSleepMilliseconds)
 
-    iter = 1
+    # iter = 1
     wheelPositionLast = None
 
     # Play notes from a chromatic scale, as opposed to a continuous range of frequencies?
@@ -286,7 +294,7 @@ def main():
 
         changedWaveform = False
         lfoChanged = False
-        
+
         gestureValue = 0
         if gestureSensor:
             gestureValue = gestureSensor.gesture()
@@ -355,30 +363,25 @@ def main():
         # r1 is the main ToF detector, used for main frequency.
         # r2 is the secondary ToF, used for LFO freq, and maybe other things.
         #
-        r1 = tof_L0X.range
-        r2 = 0
-        if tof_L4CD and tof_L4CD.data_ready:
+        r1 = tof_A.range
+        r2 = tof_B.range
+        # print(f"Range A: {r1}, range B: {r2}")
 
-            r2 = tof_L4CD.distance
-
-            # r2 seems to range from r2~=25 at 10 inches down to r2~=1.0 at a few mm.
-            # - We do get readings farther out, to like 50 or 60 at 2 feet, but will use the closer range.
-            # TODO: Use values 5-25 for now; tailor for trem/vib?
+        if r2 > 50 and r2 < 500:
+            # TODO: REWORK THIS
+            # - We do get readings farther out, to like XXXX at 2 feet, but will use the closer range.
+            # TODO: Use values XXXX for now; tailor for trem/vib?
             # sometimes there seem to be false signals of 0, so toss them out.
-            if r2 > 0 and r2 < 25:
-                r2a = max(5, r2)
-                # print(f"r2: {r2} -> r2a = {r2a}")
+            r2a = max(5, r2)
+            print(f"r2: {r2} -> r2a = {r2a}")
 
-                # TODO: only set if r2 has *changed*? especially if we force the value to be an int.
-                
-                # if mode was changed, the "other" mode has already been cleared, so we are good to go.
-                if lfoIndex == 1: # tremolo 
-                    synth.setTremolo(r2a) # map to 8-16?
-                elif lfoIndex == 2:
-                    synth.setVibrato(r2a) # map to 4-10?
-
-            # must do this to get another reading
-            tof_L4CD.clear_interrupt()
+            # TODO: only set if r2 has *changed*? especially if we force the value to be an int.
+            
+            # if mode was changed, the "other" mode has already been cleared, so we are good to go.
+            if lfoIndex == 1: # tremolo 
+                synth.setTremolo(r2a) # map to 8-16?
+            elif lfoIndex == 2:
+                synth.setVibrato(r2a) # map to 4-10?
 
         if r1 > 0 and r1 < 1000:
 
@@ -411,7 +414,7 @@ def main():
         else: # no proximity detected
             synth.stop()
 
-        iter += 1
+        # iter += 1
 
 
 main() # :-)
