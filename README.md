@@ -23,10 +23,12 @@ So far, almost all components are from [Adafruit](https://www.adafruit.com). I l
 
 ## Software required
  * Adafruit CircuitPython 8.2.something (currently Release Candidate 1)
- * The following Adafruit support libraries:
+ * The following Adafruit support libraries; use 'circup' to install?
    * adafruit_vl53l0x.mpy
-   * adafruit_apds9960 support lib (3 files)
-   * (more...tbd)
+   * adafruit_apds9960
+   * adafruit_bus_device
+   * adafruit_register
+   * adafruit_max9744
 
 ## Dev environment
 I have been using Visual Studio Code for my IDE but I don't think that matters. I have the CircuitPython extension installed, which is nice, but it is only somewhat functional as I also have my VS Code running in WSL2, which breaks some things. YMMV.
@@ -94,9 +96,20 @@ Currently, the PWM pin (see the code for which one) goes to the headphone jack. 
 
 
 ## Notes
+### Pinouts/connections for MAX98357A I2S amplifier breakout
+| Pico   | Max98357A |
+| ------ | --------- |
+| D9     | BCLK      |
+| D10    | LRC       |
+| D11    | DIN       |
+
 ### Pinouts for Adafruit 2.2" TFT and EyeSPI breakout
-Pretty obvious now, but I'll document it just for fun.
-| RP2040 | Display | EyeSPI |
+Pretty obvious now, but I'll document it just for fun. 
+This shows two possible sets of connections: 
+the first, for direct Pico-to-ILI9341 board connection; 
+the second is for using the EyeSPI breakout board in-between.
+
+| Pico   | Display | EyeSPI |
 | ------ | ------- | ------ |
 | MI     | -       | -      |
 | MO     | MOSI    | MOSI   |
@@ -106,3 +119,7 @@ Pretty obvious now, but I'll document it just for fun.
 | A0     | DC      | DC     |
 | 3v3    | Vin     | Vin    |
 | GND    | Gnd     | GND    |
+
+### Common Mistakes and their solutions
+* "RuntimeError: No pull up found on SDA or SCL; check your wiring"
+** Loose connection on StemmaQT bus (first connector in chain?)
