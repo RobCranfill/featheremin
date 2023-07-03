@@ -92,3 +92,17 @@ Currently, the PWM pin (see the code for which one) goes to the headphone jack. 
    * Stereo
    * Line out
 
+
+## Notes
+### Pinouts for Adafruit 2.2" TFT and EyeSPI breakout
+Pretty obvious now, but I'll document it just for fun.
+| RP2040 | Display | EyeSPI |
+| ------ | ------- | ------ |
+| MI     | -       | -      |
+| MO     | MOSI    | MOSI   |
+| SCK    | SCK     | SCK    |
+| A2     | CS      | TCS    |
+| A1     | RST     | RST    |
+| A0     | DC      | DC     |
+| 3v3    | Vin     | Vin    |
+| GND    | Gnd     | GND    |
