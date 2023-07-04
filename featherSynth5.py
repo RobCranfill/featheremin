@@ -1,6 +1,7 @@
 # A synthio-based implementation of FeatherSynth.
-# Uses I2S.
-# TODO: Parameterize the audio object.
+# Uses I2S instead of PWM.
+#
+# TODO: Use "detuning" to get a fatter sound?
 #
 # For the Featheremin project - https://github.com/RobCranfill/featheremin
 #
@@ -17,7 +18,7 @@ SYNTH_RATE    = 22050
 SAMPLE_RATE   = 28000
 SAMPLE_SIZE   =   512
 SAMPLE_VOLUME = 32000
-BUFFER_SIZE   =  2048
+BUFFER_SIZE   =  4096 # up from 2K, does this help the SPI noise?
 
 # A do-nothing 'BlockInput' for the LFOs
 LFO_NONE = 1.0
@@ -28,7 +29,7 @@ class FeatherSynth:
 
         Can change waveform, TODO: envelope, and add tremolo or vibrato.
 
-        TODO: Triangle wave? Saw up vs saw down? (it is a rising sawtooth now.)
+        TODO: Triangle wave? saw up vs saw down? (it is a rising sawtooth now.)
 
     '''
     def __init__(self, i2s_bit_clock, i2s_word_select, i2s_data) -> None:
@@ -37,9 +38,9 @@ class FeatherSynth:
 
         # OLD PWM CODE
         # We used to pass in just one param, the pin to use for PWM.
-        # I would have kept that if Python had allowed multiple constructors, but it doesn't.
-        # :-(
-        # self._audio = audiopwmio.PWMAudioOut(boardPinPWM)
+        # I would have kept that if Python had allowed multiple constructors, but it doesn't. :-(
+        #
+        #  self._audio = audiopwmio.PWMAudioOut(boardPinPWM)
 
         self._audio = audiobusio.I2SOut(i2s_bit_clock, i2s_word_select, i2s_data)
 

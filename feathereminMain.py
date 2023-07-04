@@ -226,6 +226,12 @@ def displayLFOMode(disp, mode):
 def clamp(num, min_value, max_value):
    return max(min(num, max_value), min_value)
 
+'''
+    Map the input number's position in the input range to the output range.
+'''
+def map_and_scale(inValue, lowIn, highIn, lowOut, highOut):
+    frac = (inValue-lowIn)/(highIn-lowIn)
+    return lowOut + frac * (highOut-lowOut)
 
 # --------------------------------------------------
 # ------------------- begin main -------------------
@@ -240,6 +246,11 @@ def main():
     # Initialize the hardware, dying if something critical is missing.
     #
     tof_A, tof_B, gestureSensor, display, amp, wheel, wheelButton, wheelLED = init_hardware()
+
+    if tof_A is None or display is None:
+        print("\n AUGHHHHHHH !!!!!\n\n")
+        print("Necessary hardware not found.\n")
+        return
 
     # My "synthezier" object that does the stuff that I need.
     #
@@ -373,26 +384,31 @@ def main():
         # r2 is the secondary ToF, used for LFO freq, and maybe other things.
         #
         r1 = tof_A.range
-        r2 = tof_B.range
         # print(f"Range A: {r1}, range B: {r2}")
 
-        if r2 > 50 and r2 < 500:
-            # TODO: REWORK THIS
-            # - We do get readings farther out, to like XXXX at 2 feet, but will use the closer range.
-            # TODO: Use values XXXX for now; tailor for trem/vib?
-            # sometimes there seem to be false signals of 0, so toss them out.
-            r2a = max(5, r2)
-            print(f"r2: {r2} -> r2a = {r2a}")
-
-            # TODO: only set if r2 has *changed*? especially if we force the value to be an int.
-            
-            # if mode was changed, the "other" mode has already been cleared, so we are good to go.
-            if lfoIndex == 1: # tremolo 
-                synth.setTremolo(r2a) # map to 8-16?
-            elif lfoIndex == 2:
-                synth.setVibrato(r2a) # map to 4-10?
-
         if r1 > 0 and r1 < 1000:
+
+            # (only read tof 2 if 1 is close)
+            #
+            r2 = tof_B.range    
+            if r2 > 50 and r2 < 500:
+                # TODO: REWORK THIS
+                # - We do get readings farther out, to like XXXX at 2 feet, but will use the closer range.
+                # TODO: Use values XXXX for now; tailor for trem/vib?
+                # sometimes there seem to be false signals of 0, so toss them out.
+                r2a = max(5, r2)
+                # print(f"r2: {r2} -> r2a = {r2a}")
+
+                # TODO: only set if r2 has *changed*? especially if we force the value to be an int.
+                
+                # if mode was changed, the "other" mode has already been cleared, so we are good to go.
+                if lfoIndex == 1: # tremolo
+                     # map to 8-16?
+                    trem = map_and_scale(r2, 50, 500, 8, 16)
+                    print(f"r2 {r2} -> trem {trem}")
+                    synth.setTremolo(trem)
+                elif lfoIndex == 2:
+                    synth.setVibrato(r2a) # map to 4-10?
 
             # drone mode
             if lfoIndex == 3:

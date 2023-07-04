@@ -25,10 +25,9 @@ class FeathereminDisplay9341:
 
     def __init__(self, p_rotation, boardPinCS, boardPinDC, boardPinReset) -> None:
 
-        splash_ = None
-        text_area_1_ = None
-        text_area_2_ = None
-        text_area_3_ = None
+        self.text_area_1_ = None
+        self.text_area_2_ = None
+        self.text_area_3_ = None
 
         # Release any resources currently in use for the displays
         displayio.release_displays()
@@ -41,14 +40,13 @@ class FeathereminDisplay9341:
 
         tft_cs, tft_dc, tft_reset = boardPinCS, boardPinDC, boardPinReset
 
-        display_bus = displayio.FourWire(spi, command=tft_dc, chip_select=tft_cs, reset=tft_reset)
         try:
+            display_bus = displayio.FourWire(spi, command=tft_dc, chip_select=tft_cs, reset=tft_reset)
             display = adafruit_ili9341.ILI9341(display_bus, width=320, height=240, rotation=p_rotation)
         except:
             print("No ILI9341 display found?")
-            # FIXME: is this rude or ok?
-            while True:
-                pass
+            # FIXME: what to do if construction fails?
+            return
 
         # Make the display context
         splash = displayio.Group()
