@@ -23,7 +23,7 @@ from adafruit_vl53l0x import VL53L0X
 # TODO: just call this a "FeathereminDisplay" object ?
 class FeathereminDisplay9341:
 
-    def __init__(self, boardPinCS, boardPinDC, boardPinReset) -> None:
+    def __init__(self, p_rotation, boardPinCS, boardPinDC, boardPinReset) -> None:
 
         splash_ = None
         text_area_1_ = None
@@ -43,7 +43,7 @@ class FeathereminDisplay9341:
 
         display_bus = displayio.FourWire(spi, command=tft_dc, chip_select=tft_cs, reset=tft_reset)
         try:
-            display = adafruit_ili9341.ILI9341(display_bus, width=320, height=240, rotation=180)
+            display = adafruit_ili9341.ILI9341(display_bus, width=320, height=240, rotation=p_rotation)
         except:
             print("No ILI9341 display found?")
             # FIXME: is this rude or ok?

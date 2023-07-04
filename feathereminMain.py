@@ -51,9 +51,11 @@ TFT_DISPLAY_CS    = board.A2
 TFT_DISPLAY_DC    = board.A0
 TFT_DISPLAY_RESET = board.A1
 
-# L4CD_ALTERNATE_I2C_ADDR = 0x31
 # The L0X defaults to I2C 0x29; we have two, one of which we will re-assign to this address.
 L0X_B_ALTERNATE_I2C_ADDR = 0x31
+
+ROTARY_ENCODER_I2C_ADDR = 0x36
+SEE_SAW_BUTTON_PIN_WTF = 24  # FIXME: wtf is this magic number?
 
 INITIAL_AMP_VOLUME = 10 # 25 is max for 20W amp and 3W 4 ohm speaker with 12v to amp.
 
@@ -100,7 +102,7 @@ def init_hardware() -> list(adafruit_vl53l0x.VL53L0X,    # 'A' ToF sensor
     print("Turning off primary VL53L0X...")
     L0X_A_reset = feather_digitalio.DigitalInOut(L0X_A_RESET_OUT)
     L0X_A_reset.direction = feather_digitalio.Direction.OUTPUT
-    L0X_A_reset.value = 0
+    L0X_A_reset.value = False
     # VL53L0X sensor is now turned off
     showI2Cbus()
 
@@ -142,7 +144,8 @@ def init_hardware() -> list(adafruit_vl53l0x.VL53L0X,    # 'A' ToF sensor
     # ----------------- VL53L0X time-of-flight sensor, part 2
     # Turn L0X back on and instantiate its object
     print("Turning VL53L0X back on...")
-    L0X_A_reset.value = 1
+    L0X_A_reset.value = True
+    L0X_A = None
     try:
         L0X_A = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
         print("'Primary' VL53L0X init OK")
@@ -165,7 +168,7 @@ def init_hardware() -> list(adafruit_vl53l0x.VL53L0X,    # 'A' ToF sensor
         print("**** No APDS9960? Continuing....")
 
     # ----------------- Our display object
-    display = feathereminDisplay9341.FeathereminDisplay9341(TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET)
+    display = feathereminDisplay9341.FeathereminDisplay9341(180, TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET)
     print("Display init OK")
 
     # ------------------ MAX9744 amp, if any
@@ -178,24 +181,30 @@ def init_hardware() -> list(adafruit_vl53l0x.VL53L0X,    # 'A' ToF sensor
         print("**** No MAX9744 amplifier found; continuing....")
 
     # ------------------ Rotary encoder
-    ss = seesaw.Seesaw(i2c, addr=0x36)
-    seesaw_v = (ss.get_version() >> 16) & 0xFFFF
-    # print(f"Found product {seesaw_v}")
-    if seesaw_v != 4991:
-        print("**** Wrong Rotary encoder firmware loaded?  Expected 4991")
-        # what are we supposed to do about this??
-    encoder = rotaryio.IncrementalEncoder(ss)
+    encoder, wheel_button, pixel = None, None, None
+    try:
+        ss = seesaw.Seesaw(i2c, addr=ROTARY_ENCODER_I2C_ADDR)
+        seesaw_v = (ss.get_version() >> 16) & 0xFFFF
+        # print(f"Found product {seesaw_v}")
+        if seesaw_v != 4991:
+            print("**** Wrong Rotary encoder firmware loaded?  Expected 4991")
+            # what are we supposed to do about this??
+        encoder = rotaryio.IncrementalEncoder(ss)
 
-    # the "button" that is got by pushing down on the encoder wheel
-    ss.pin_mode(24, ss.INPUT_PULLUP)
-    wheel_button = digitalio.DigitalIO(ss, 24)
-    # button_held = False
+        # the "button" that is got by pushing down on the encoder wheel
+        ss.pin_mode(SEE_SAW_BUTTON_PIN_WTF, ss.INPUT_PULLUP)
+        wheel_button = digitalio.DigitalIO(ss, 24)
 
-    # TODO: tried to do something with the Neopixel but haven't figured anything out yet. :-/
-    pixel = neopixel.NeoPixel(ss, 6, 1)
-    # pixel.brightness = 0.1
-    pixel.fill(0x004000) # green for go!
-    print("Rotary encoder init OK")
+        # TODO: tried to do something with the Neopixel but haven't figured anything out yet. :-/
+        pixel = neopixel.NeoPixel(ss, 6, 1)
+        # pixel.brightness = 0.1
+        pixel.fill(0x004000) # green for go!
+        print("Rotary encoder init OK")
+    
+    except:
+        print(f"\n**** No rotary encoder at I2C {hex(ROTARY_ENCODER_I2C_ADDR)}? Can't continue!\n")
+        # return
+
 
     print("\ninit_hardware OK!\n")
     

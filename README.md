@@ -122,4 +122,4 @@ the second is for using the EyeSPI breakout board in-between.
 
 ### Common Mistakes and their solutions
 * "RuntimeError: No pull up found on SDA or SCL; check your wiring"
-** Loose connection on StemmaQT bus (first connector in chain?)
+  * Loose connection on StemmaQT bus (first connector in chain?)
