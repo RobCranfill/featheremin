@@ -1,4 +1,5 @@
-# being an un-committed file that I can point to whatever I want to run next....
+# This 'main' file just imports whatever code I really want to run.
+# That is, the main project file or maybe test code.
 
 # ----------------------------------------------------
 # import supervisor
@@ -7,9 +8,9 @@
 
 # ----------------------------------------------------
 # This runs my main project code:
-# import feathereminMain
-# while True:
-#     pass
+import feathereminMain
+while True:
+    pass
 
 
 # Other test code, found in ./test directory.
