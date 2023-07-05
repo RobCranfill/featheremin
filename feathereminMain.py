@@ -52,7 +52,7 @@ TFT_DISPLAY_DC    = board.A0
 TFT_DISPLAY_RESET = board.A1
 
 # The L0X defaults to I2C 0x29; we have two, one of which we will re-assign to this address.
-L0X_B_ALTERNATE_I2C_ADDR = 0x31
+L0X_B_ALTERNATE_I2C_ADDR = 0x30
 
 ROTARY_ENCODER_I2C_ADDR = 0x36
 SEE_SAW_BUTTON_PIN_WTF = 24  # FIXME: wtf is this magic number?
@@ -102,7 +102,7 @@ def init_hardware() -> list(adafruit_vl53l0x.VL53L0X,    # 'A' ToF sensor
     print("Turning off primary VL53L0X...")
     L0X_A_reset = feather_digitalio.DigitalInOut(L0X_A_RESET_OUT)
     L0X_A_reset.direction = feather_digitalio.Direction.OUTPUT
-    L0X_A_reset.value = False
+    L0X_A_reset.value = 0
     # VL53L0X sensor is now turned off
     showI2Cbus()
 
@@ -117,6 +117,7 @@ def init_hardware() -> list(adafruit_vl53l0x.VL53L0X,    # 'A' ToF sensor
     except:
         print(f"Did not find secondary VL53L0X at {hex(L0X_B_ALTERNATE_I2C_ADDR)}, trying default....")
         try:
+            # Try at the default address
             L0X_B = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
             print(f"Found VL53L0X at default address; setting to {hex(L0X_B_ALTERNATE_I2C_ADDR)}...")
             L0X_B.set_address(L0X_B_ALTERNATE_I2C_ADDR)  # address assigned should NOT be already in use
@@ -136,7 +137,8 @@ def init_hardware() -> list(adafruit_vl53l0x.VL53L0X,    # 'A' ToF sensor
             # print(f"    Inter-Measurement: {L4CD.inter_measurement}")
             # print("--------------------")
             print("secondary VL53L0X init OK")
-        except:
+        except Exception as e:
+            print(f"**** Caught exception: {e}")
             print("**** No secondary VL53L0X?")
             L0X_B = None
 
@@ -144,7 +146,7 @@ def init_hardware() -> list(adafruit_vl53l0x.VL53L0X,    # 'A' ToF sensor
     # ----------------- VL53L0X time-of-flight sensor, part 2
     # Turn L0X back on and instantiate its object
     print("Turning VL53L0X back on...")
-    L0X_A_reset.value = True
+    L0X_A_reset.value = 1
     L0X_A = None
     try:
         L0X_A = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
@@ -168,7 +170,7 @@ def init_hardware() -> list(adafruit_vl53l0x.VL53L0X,    # 'A' ToF sensor
         print("**** No APDS9960? Continuing....")
 
     # ----------------- Our display object
-    display = feathereminDisplay9341.FeathereminDisplay9341(180, TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET)
+    display = feathereminDisplay9341.FeathereminDisplay9341(0, TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET)
     print("Display init OK")
 
     # ------------------ MAX9744 amp, if any

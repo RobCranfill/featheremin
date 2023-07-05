@@ -93,6 +93,8 @@ Currently, the PWM pin (see the code for which one) goes to the headphone jack. 
  * Future?
    * Stereo
    * Line out
+ * Errors
+   * Flash an LED (which one?) in some error pattern.
 
 
 ## Notes
@@ -120,6 +122,20 @@ the second is for using the EyeSPI breakout board in-between.
 | 3v3    | Vin     | Vin    |
 | GND    | Gnd     | GND    |
 
+### I2C Addresses
+We use two VL53L0X devices; by default they both have the same address, 
+so we need to do some magic to make things work. See the code!
+
+| I2 Address | Device | Notes |
+| ---------- | ------ | ----- |
+| 0x29       | VL53L0X #1 | Default is good |
+| 0x30       | VL53L0X #2 | We must set this via software and hardware (GPIO) |
+| 0x36       | Rotary Encoder | Default is OK; can change via jumper |
+| 0x39       | APDS-9960 Gesture sensor | Cannot be changed |
+
+
 ### Common Mistakes and their solutions
+* Sometimes on startup, the logic for setting the I2C address of the 2nd VL53L0X doesn't work.
+  * Just keep trying, it will work. (What's up with that?!)
 * "RuntimeError: No pull up found on SDA or SCL; check your wiring"
   * Loose connection on StemmaQT bus (first connector in chain?)
