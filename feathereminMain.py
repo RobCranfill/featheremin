@@ -12,26 +12,30 @@ import time
 import supervisor
 import sys
 
+
+#############################################################3
+# Things to do
+##############
+# Do we need to 'deinit' things? Which things?? Might not be a bad idea!
+# Such as the GPIOs, display, sensors
+
+
 # Adafruit hardware libraries - www.adafruit.com
-import feathereminDisplay9341
 import adafruit_vl53l0x
 # import adafruit_vl53l4cd
 import adafruit_max9744
 from adafruit_apds9960.apds9960 import APDS9960
 from adafruit_seesaw import seesaw, rotaryio, digitalio, neopixel
 
-import featherSynth5
+# Other Featheremin modules
+import feathereminDisplay9341 as fDisplay
+import featherSynth5 as fSynth
 
 # No 'enum' in circuitpython! :-(
-# from enum import Enum
-# class Waveform(Enum):
-#     SQUARE = 1
-#     SINE = 2
-#     SAW = 3
 WAVEFORM_TYPES = ["Square", "Sine", "Saw"]
 LFO_MODES = ["LFO Off", "Tremolo", "Vibrato", "Drone"]
 lfo_tremolo_freq = 15
-lfo_vibrato_freq = 4
+lfo_vibrato_freq =  4
 
 # GPIO pins used:
 # The GPIO pin we use to turn the 'primary' ("A") ToF sensor off,
@@ -39,14 +43,14 @@ lfo_vibrato_freq = 4
 L0X_A_RESET_OUT = board.D4
 
 # for PWM audio output
-# AUDIO_OUT_PIN = board.D5    
+AUDIO_OUT_PIN = board.D5
 
 # for I2S audio out
 AUDIO_OUT_I2S_BIT  = board.D9
 AUDIO_OUT_I2S_WORD = board.D10
 AUDIO_OUT_I2S_DATA = board.D11
 
-# Display
+# TFT display
 TFT_DISPLAY_CS    = board.A2
 TFT_DISPLAY_DC    = board.A0
 TFT_DISPLAY_RESET = board.A1
@@ -67,15 +71,15 @@ def showI2Cbus():
         i2c.unlock()
 
 
-def init_hardware() -> list(adafruit_vl53l0x.VL53L0X,    # 'A' ToF sensor
-                            adafruit_vl53l0x.VL53L0X,    # 'B' ToF sensor
-                            APDS9960,                    # gesture sensor
-                            feathereminDisplay9341.FeathereminDisplay9341, # our display object
-                            adafruit_max9744.MAX9744,    # big amplifier, or None
-                            rotaryio.IncrementalEncoder, # rotary encoder
-                            digitalio.DigitalIO,         # pushbutton in rotary encoder
-                            neopixel.NeoPixel            # neopixel in rotary encoder
-                            ):
+def init_hardware() -> tuple[adafruit_vl53l0x.VL53L0X|None,   # 'A' ToF sensor
+                            adafruit_vl53l0x.VL53L0X|None,    # 'B' ToF sensor
+                            APDS9960|None,                    # gesture sensor
+                            fDisplay.FeathereminDisplay9341|None, # our display object
+                            adafruit_max9744.MAX9744|None,    # big amplifier, or None
+                            rotaryio.IncrementalEncode|None,  # rotary encoder
+                            digitalio.DigitalIO|None,         # pushbutton in rotary encoder
+                            neopixel.NeoPixel|None            # neopixel in rotary encoder
+                            ]:
     
     """Initialize various hardware items.
     Namely, the I2C bus, Time of Flight sensors, gesture sensor, display, and amp (if attached).
@@ -102,7 +106,7 @@ def init_hardware() -> list(adafruit_vl53l0x.VL53L0X,    # 'A' ToF sensor
     print("Turning off primary VL53L0X...")
     L0X_A_reset = feather_digitalio.DigitalInOut(L0X_A_RESET_OUT)
     L0X_A_reset.direction = feather_digitalio.Direction.OUTPUT
-    L0X_A_reset.value = 0
+    L0X_A_reset.value = False
     # VL53L0X sensor is now turned off
     showI2Cbus()
 
@@ -123,20 +127,14 @@ def init_hardware() -> list(adafruit_vl53l0x.VL53L0X,    # 'A' ToF sensor
             L0X_B.set_address(L0X_B_ALTERNATE_I2C_ADDR)  # address assigned should NOT be already in use
             print("VL53L0X set_address OK")
 
-            # # set non-default values?
-            L0X_B.inter_measurement = 0
-            L0X_B.timing_budget = 100
-            L0X_B.start_ranging()
+            # Set params for the sensor?
+            # # The default timing budget is 33ms, a good compromise of speed and accuracy.
+            # # For example a higher speed but less accurate timing budget of 20ms:
+            # L0X_B.measurement_timing_budget = 20000
+            # # Or a slower but more accurate timing budget of 200ms:
+            # L0X_B.measurement_timing_budget = 200000
 
-            # print("--------------------")
-            # print("VL53L4CD:")
-            # model_id, module_type = L4CD.model_info
-            # print(f"    Model ID: 0x{model_id:0X}")
-            # print(f"    Module Type: 0x{module_type:0X}")
-            # print(f"    Timing Budget: {L4CD.timing_budget}")
-            # print(f"    Inter-Measurement: {L4CD.inter_measurement}")
-            # print("--------------------")
-            print("secondary VL53L0X init OK")
+            print("Secondary VL53L0X init OK")
         except Exception as e:
             print(f"**** Caught exception: {e}")
             print("**** No secondary VL53L0X?")
@@ -146,10 +144,18 @@ def init_hardware() -> list(adafruit_vl53l0x.VL53L0X,    # 'A' ToF sensor
     # ----------------- VL53L0X time-of-flight sensor, part 2
     # Turn L0X back on and instantiate its object
     print("Turning VL53L0X back on...")
-    L0X_A_reset.value = 1
+    L0X_A_reset.value = True
     L0X_A = None
     try:
         L0X_A = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
+
+        # Set params for the sensor?
+        # # The default timing budget is 33ms, a good compromise of speed and accuracy.
+        # # For example a higher speed but less accurate timing budget of 20ms:
+        # L0X_A.measurement_timing_budget = 20000
+        # # Or a slower but more accurate timing budget of 200ms:
+        # L0X_A.measurement_timing_budget = 200000
+
         print("'Primary' VL53L0X init OK")
     except:
         print("**** No primary VL53L0X? Continuing....")
@@ -174,13 +180,15 @@ def init_hardware() -> list(adafruit_vl53l0x.VL53L0X,    # 'A' ToF sensor
     print("Display init OK")
 
     # ------------------ MAX9744 amp, if any
+    # TODO: merge this into the Synth object? Or at least hand it to that object to use?
     amp = None
     try:
         amp = adafruit_max9744.MAX9744(i2c)
         amp.volume = INITIAL_AMP_VOLUME
         print("MAX9744 amp init OK")
-    except:
-        print("**** No MAX9744 amplifier found; continuing....")
+    except Exception as e:
+        print(f"**** No MAX9744 amplifier found; {e} \n continuing....")
+        amp = None
 
     # ------------------ Rotary encoder
     encoder, wheel_button, pixel = None, None, None
@@ -249,15 +257,27 @@ def main():
     #
     tof_A, tof_B, gestureSensor, display, amp, wheel, wheelButton, wheelLED = init_hardware()
 
-    if tof_A is None or display is None:
+    # What missing hardware can we tolerate?
+
+    # Check only for the two really, really required things?
+    # if tof_A is None or display is None:
+
+    # Check for anything missing?
+    # if None in (tof_A, tof_B, gestureSensor, display, amp, wheel, wheelButton, wheelLED):
+
+    # No MAX9744 amp is always OK
+    if None in (tof_A, tof_B, gestureSensor, display, wheel, wheelButton, wheelLED):
+
         print("\n AUGHHHHHHH !!!!!\n\n")
         print("Necessary hardware not found.\n")
+        print(f"ToF A: {tof_A}\nToF B: {tof_B}\nGest: {gestureSensor}\nDisp: {display}")
+        print(f"Amp: {amp}\nWheel: {wheel}\nButt: {wheelButton}\nLED: {wheelLED}")
         return
 
     # My "synthezier" object that does the stuff that I need.
     #
     # synth = featherSynth5.FeatherSynth(AUDIO_OUT_PIN)
-    synth = featherSynth5.FeatherSynth(
+    synth = fSynth.FeatherSynth(
         i2s_bit_clock=AUDIO_OUT_I2S_BIT, i2s_word_select=AUDIO_OUT_I2S_WORD, i2s_data=AUDIO_OUT_I2S_DATA)
     synth.setVolume(0.1)
 

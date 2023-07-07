@@ -1,5 +1,5 @@
 # A synthio-based implementation of FeatherSynth.
-# Uses I2S instead of PWM.
+# Uses an I2S amplifier instead of simple PWM.
 #
 # TODO: Use "detuning" to get a fatter sound?
 #
@@ -12,7 +12,7 @@ import microcontroller
 import random
 import synthio
 import time
-import ulab.numpy as np
+import ulab.numpy as numpy
 
 SYNTH_RATE    = 22050
 SAMPLE_RATE   = 28000
@@ -59,11 +59,12 @@ class FeatherSynth:
 
         # Build some waveforms
         #
-        self._WAVE_SINE = np.array(np.sin(np.linspace(0, 2*np.pi, SAMPLE_SIZE, endpoint=False)) * SAMPLE_VOLUME, dtype=np.int16)
+        self._WAVE_SINE = numpy.array(
+            numpy.sin(numpy.linspace(0, 2*numpy.pi, SAMPLE_SIZE, endpoint=False)) * SAMPLE_VOLUME, dtype=numpy.int16)
 
         # this is a rising sawtooth, going from -SAMPLE_VOLUME down to +SAMPLE_VOLUME
         # TODO: does a falling sawtooth sound different?
-        self._WAVE_SAW = np.linspace(SAMPLE_VOLUME, -SAMPLE_VOLUME, num=SAMPLE_SIZE, dtype=np.int16)
+        self._WAVE_SAW = numpy.linspace(SAMPLE_VOLUME, -SAMPLE_VOLUME, num=SAMPLE_SIZE, dtype=numpy.int16)
 
         # print(f"wave_sine: {self._WAVE_SINE}")
         # print(f"wave_saw: {self._WAVE_SAW}")
@@ -145,6 +146,10 @@ class FeatherSynth:
             print("must start drone!")
             return
         # print(f"drone {f1}, {f2}")
+        if f1 < 0 or f1 > 32767 or f2 < 0 or f2 > 32767:
+            print(f"*** drone freq OOB: {f1}, {f2}")
+            return
+
         self._drone1.frequency = f1
         self._drone2.frequency = f2
 
@@ -187,14 +192,14 @@ class FeatherSynth:
     
         # # create a sawtooth sort of 'song', like a siren, with non-integer midi notes
         # start_note = 65
-        # song_notes = np.arange(0, 20, 0.1)
-        # song_notes = np.concatenate((song_notes, np.arange(20, 0, -0.1)), axis=0)
+        # song_notes = numpy.arange(0, 20, 0.1)
+        # song_notes = numpy.concatenate((song_notes, numpy.arange(20, 0, -0.1)), axis=0)
         # delay = 0.02
 
         # # integer version
         # start_note = 65
-        # song_notes = np.arange(0, 20, 1)
-        # song_notes = np.concatenate((song_notes, np.arange(20, 0, -1)), axis=0)
+        # song_notes = numpy.arange(0, 20, 1)
+        # song_notes = numpy.concatenate((song_notes, numpy.arange(20, 0, -1)), axis=0)
         # delay = 0.2
 
         # after 'tiny lfo song' by @todbot
