@@ -59,26 +59,51 @@ class FeathereminDisplay:
         # Because this is scaled by 2, the coordinates are half what you'd expect.
         # (The display area is effectively 160 x 120)
         #
-        text_group = displayio.Group(scale=2, x=0, y=40)
+        text_group = displayio.Group(scale=2, x=0, y=78)
 
-        self.text_area_1_ = label.Label(terminalio.FONT, text="text_area_1_", color=MESSAGE_TEXT_COLOR, x=12, y=0)
+        self.text_area_1_ = label.Label(terminalio.FONT, text="", color=MESSAGE_TEXT_COLOR, x=12, y=0)
         text_group.append(self.text_area_1_)  # Subgroup for text scaling
 
-        self.text_area_2_ = label.Label(terminalio.FONT, text="text_area_2_", color=MESSAGE_TEXT_COLOR, x=14, y=30)
+        self.text_area_2_ = label.Label(terminalio.FONT, text="", color=MESSAGE_TEXT_COLOR, x=12, y=23)
         text_group.append(self.text_area_2_)
 
-        self.text_area_3_ = label.Label(terminalio.FONT, text="text_area_3_", color=MESSAGE_TEXT_COLOR, x=16, y=60)
+        self.text_area_3_ = label.Label(terminalio.FONT, text="", color=MESSAGE_TEXT_COLOR, x=12, y=45)
         text_group.append(self.text_area_3_)
 
-        self.text_area_l_ = label.Label(terminalio.FONT, text="Control L", color=STATUS_TEXT_COLOR, x=10, y=80)
+        self.text_area_l_ = label.Label(terminalio.FONT, text="", color=STATUS_TEXT_COLOR, x=10, y=65)
         text_group.append(self.text_area_l_)
 
-        self.text_area_r_ = label.Label(terminalio.FONT, text="Control R", color=STATUS_TEXT_COLOR, x=90, y=80)
+        self.text_area_r_ = label.Label(terminalio.FONT, text="", color=STATUS_TEXT_COLOR, x=90, y=65)
         text_group.append(self.text_area_r_)
 
         background_group.append(text_group)
 
+
+        # Load the sprite sheet bitmap
+        sprite_sheet, led_palette = adafruit_imageload.load("/led_sprite_sheet.bmp",
+                                                        bitmap=displayio.Bitmap,
+                                                        palette=displayio.Palette)
+
+        # Create a sprite (tilegrid)
+        self.led_sprite = displayio.TileGrid(sprite_sheet, pixel_shader=palette,
+                                    width = 1, height = 1,
+                                    tile_width = 16, tile_height = 16)
+
+        # Create a Group to hold the sprite
+        led_group = displayio.Group(scale=1)
+        led_group.append(self.led_sprite)
+
+        # Set sprite location
+        led_group.x =  25
+        led_group.y = 203
+
+        background_group.append(led_group)
+
     # end __init__
+
+
+    def setLEDStatus(self, status: bool):
+        pass
 
     # "setters" for the text areas
     #
@@ -101,16 +126,20 @@ class FeathereminDisplay:
     This does not return!
     '''
     def test(self) -> NoReturn:
-        self.setTextArea1("You are")
-        self.setTextArea2("A hideous")
-        self.setTextArea3("orangutan!")
 
+        self.setTextArea2("You are a")
+        self.setTextArea3("hideous orangutan!")
+        self.setTextAreaL("")
+        self.setTextAreaR("Testing")
+
+        # Loop through each sprite in the sprite sheet
         i = 1
         while True:
+            self.led_sprite[0] = i % 2
             self.setTextArea1(f"Tick {i}...")
             i += 1
-            time.sleep(1)
-            
+            time.sleep(.5)
+
         print("Display test waiting, so display doesn't get erased.")
 
         while True:
