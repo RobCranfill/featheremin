@@ -82,19 +82,23 @@ Currently, the PWM pin (see the code for which one) goes to the headphone jack. 
    * Refresh/pause rate
 
  * Display
-   * Some small LCD
+   * High-quality background that we can paint info onto
+     * Pseudo alphanumeric LED area for text
+     * Pseudo single LEDs for status (chromatic, etc?)
+     * Bar graph? Meter?!
 
  * Controls
    * ToF
    * Gesture
    * Rotary encoder
    * Hardware volume?
-   * Kill switch?
+   * Kill/reset switch?
  * Future?
    * Stereo
    * Line out
  * Errors
    * Flash an LED (which one?) in some error pattern.
+     * Bring an LED out to box
 
 
 ## Notes
@@ -139,3 +143,12 @@ so we need to do some magic to make things work. See the code!
   * Just keep trying, it will work. (What's up with that?!)
 * "RuntimeError: No pull up found on SDA or SCL; check your wiring"
   * Loose connection on StemmaQT bus (first connector in chain?)
+
+### Display contents
+| Area | Contents |
+| ---- | -------- |
+| T1   | Waveform |
+| T2   | Sleep    | 
+| T3   | LFO Mode |
+| Left | Chromatic? |
+| Right |        |

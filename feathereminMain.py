@@ -22,7 +22,6 @@ import sys
 
 # Adafruit hardware libraries - www.adafruit.com
 import adafruit_vl53l0x
-# import adafruit_vl53l4cd
 import adafruit_max9744
 from adafruit_apds9960.apds9960 import APDS9960
 from adafruit_seesaw import seesaw, rotaryio, digitalio, neopixel
@@ -71,14 +70,14 @@ def showI2Cbus():
         i2c.unlock()
 
 
-def init_hardware() -> tuple[adafruit_vl53l0x.VL53L0X|None,   # 'A' ToF sensor
-                            adafruit_vl53l0x.VL53L0X|None,    # 'B' ToF sensor
-                            APDS9960|None,                    # gesture sensor
-                            fDisplay.FeathereminDisplay9341|None, # our display object
-                            adafruit_max9744.MAX9744|None,    # big amplifier, or None
-                            rotaryio.IncrementalEncode|None,  # rotary encoder
-                            digitalio.DigitalIO|None,         # pushbutton in rotary encoder
-                            neopixel.NeoPixel|None            # neopixel in rotary encoder
+def init_hardware() -> tuple[adafruit_vl53l0x.VL53L0X,   # 'A' ToF sensor
+                            adafruit_vl53l0x.VL53L0X,    # 'B' ToF sensor
+                            APDS9960,                    # gesture sensor
+                            fDisplay.FeathereminDisplay9341, # our display object
+                            adafruit_max9744.MAX9744,    # big amplifier, or None
+                            rotaryio.IncrementalEncode,  # rotary encoder
+                            digitalio.DigitalIO,         # pushbutton in rotary encoder
+                            neopixel.NeoPixel            # neopixel in rotary encoder
                             ]:
     
     """Initialize various hardware items.
@@ -176,7 +175,7 @@ def init_hardware() -> tuple[adafruit_vl53l0x.VL53L0X|None,   # 'A' ToF sensor
         print("**** No APDS9960? Continuing....")
 
     # ----------------- Our display object
-    display = feathereminDisplay9341.FeathereminDisplay9341(0, TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET)
+    display = feathereminDisplay2.FeathereminDisplay(180, TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET)
     print("Display init OK")
 
     # ------------------ MAX9744 amp, if any
@@ -233,6 +232,9 @@ def displayWaveformName(disp, name):
 def displayLFOMode(disp, mode):
     disp.setTextArea3(mode)
 
+'''
+ Restrict the input number to the given range.
+'''
 def clamp(num, min_value, max_value):
    return max(min(num, max_value), min_value)
 
@@ -242,6 +244,7 @@ def clamp(num, min_value, max_value):
 def map_and_scale(inValue, lowIn, highIn, lowOut, highOut):
     frac = (inValue-lowIn)/(highIn-lowIn)
     return lowOut + frac * (highOut-lowOut)
+
 
 # --------------------------------------------------
 # ------------------- begin main -------------------
@@ -451,8 +454,6 @@ def main():
                 midiNote = int(midiNote)
 
             # print(f"{r1} -> {midiNote}")
-
-            # FIXME: this causes too much noise! synthio bug?
             # display.setTextAreaR(f"r1={r1}\nr2={r2}")
 
             synth.play(midiNote)
