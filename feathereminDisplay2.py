@@ -14,6 +14,7 @@ import displayio
 import time
 import sys
 from adafruit_display_text import label
+from adafruit_bitmap_font import bitmap_font
 import adafruit_ili9341
 import adafruit_imageload
 from digitalio import DigitalInOut, Direction
@@ -21,6 +22,8 @@ from adafruit_vl53l0x import VL53L0X
 
 MESSAGE_TEXT_COLOR = 0xFF0000
 STATUS_TEXT_COLOR = 0X000000
+
+FONT_TO_LOAD = "SFDigitalReadout-Medium-24.bdf"
 
 '''
     The display object.
@@ -55,25 +58,36 @@ class FeathereminDisplay:
         background_group.append(tile_grid) # Add the TileGrid to the Group
         display.show(background_group) # Add the Group to the Display
 
+
+        font = None
+        fontScale = 2
+        try:
+            font = bitmap_font.load_font("/" + FONT_TO_LOAD)
+            fontScale = 1
+        except:
+            print("Can't load custom font!")
+            font = terminalio.FONT
+
+
         # Labels
         # Because this is scaled by 2, the coordinates are half what you'd expect.
         # (The display area is effectively 160 x 120)
         #
-        text_group = displayio.Group(scale=2, x=0, y=78)
+        text_group = displayio.Group(scale=fontScale, x=0, y=72)
 
-        self.text_area_1_ = label.Label(terminalio.FONT, text="", color=MESSAGE_TEXT_COLOR, x=12, y=0)
+        self.text_area_1_ = label.Label(font, text="", color=MESSAGE_TEXT_COLOR, x=20, y=4)
         text_group.append(self.text_area_1_)  # Subgroup for text scaling
 
-        self.text_area_2_ = label.Label(terminalio.FONT, text="", color=MESSAGE_TEXT_COLOR, x=12, y=23)
+        self.text_area_2_ = label.Label(font, text="", color=MESSAGE_TEXT_COLOR, x=20, y=50)
         text_group.append(self.text_area_2_)
 
-        self.text_area_3_ = label.Label(terminalio.FONT, text="", color=MESSAGE_TEXT_COLOR, x=12, y=45)
+        self.text_area_3_ = label.Label(font, text="", color=MESSAGE_TEXT_COLOR, x=20, y=100)
         text_group.append(self.text_area_3_)
 
-        self.text_area_l_ = label.Label(terminalio.FONT, text="", color=STATUS_TEXT_COLOR, x=10, y=65)
+        self.text_area_l_ = label.Label(font, text="", color=STATUS_TEXT_COLOR, x=6, y=666)
         text_group.append(self.text_area_l_)
 
-        self.text_area_r_ = label.Label(terminalio.FONT, text="", color=STATUS_TEXT_COLOR, x=90, y=65)
+        self.text_area_r_ = label.Label(font, text="", color=STATUS_TEXT_COLOR, x=66, y=666)
         text_group.append(self.text_area_r_)
 
         background_group.append(text_group)
@@ -83,9 +97,13 @@ class FeathereminDisplay:
         sprite_sheet, led_palette = adafruit_imageload.load("/led_sprite_sheet.bmp",
                                                         bitmap=displayio.Bitmap,
                                                         palette=displayio.Palette)
+        
+        # The color we want to be transparent seems to be the last one in the palette.
+        # Is this always true?
+        led_palette.make_transparent(len(led_palette)-1)
 
         # Create a sprite (tilegrid)
-        self.led_sprite = displayio.TileGrid(sprite_sheet, pixel_shader=palette,
+        self.led_sprite = displayio.TileGrid(sprite_sheet, pixel_shader=led_palette,
                                     width = 1, height = 1,
                                     tile_width = 16, tile_height = 16)
 
@@ -133,7 +151,7 @@ class FeathereminDisplay:
         self.setTextAreaR("Testing")
 
         # Loop through each sprite in the sprite sheet
-        i = 1
+        i = 0
         while True:
             self.led_sprite[0] = i % 2
             self.setTextArea1(f"Tick {i}...")
