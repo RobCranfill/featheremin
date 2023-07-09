@@ -11,6 +11,7 @@
 import board
 import terminalio
 import displayio
+import random
 import time
 import sys
 from adafruit_display_text import label
@@ -92,7 +93,6 @@ class FeathereminDisplay:
 
         background_group.append(text_group)
 
-
         # Load the sprite sheet bitmap
         sprite_sheet, led_palette = adafruit_imageload.load("/led_sprite_sheet.bmp",
                                                         bitmap=displayio.Bitmap,
@@ -119,10 +119,10 @@ class FeathereminDisplay:
 
     # end __init__
 
-
+    # Make the LED red? the lit, red led is first in the sprite sheet, so index 0
     def setLEDStatus(self, status: bool):
-        pass
-
+        self.led_sprite[0] = 0 if status else 1
+ 
     # "setters" for the text areas
     #
     def setTextArea1(self, pText):
@@ -150,10 +150,9 @@ class FeathereminDisplay:
         self.setTextAreaL("")
         self.setTextAreaR("Testing")
 
-        # Loop through each sprite in the sprite sheet
         i = 0
         while True:
-            self.led_sprite[0] = i % 2
+            self.setLEDStatus(random.choice([True, False]))
             self.setTextArea1(f"Tick {i}...")
             i += 1
             time.sleep(.5)
