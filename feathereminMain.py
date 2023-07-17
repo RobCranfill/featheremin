@@ -92,7 +92,11 @@ def init_hardware() -> tuple[adafruit_vl53l0x.VL53L0X,   # 'A' ToF sensor
     # supervisor.reload()
 
     # Easist way to init I2C on a Feather:
-    i2c = board.STEMMA_I2C()
+    try:
+        i2c = board.STEMMA_I2C()
+    except:
+        print("board.STEMMA_I2C failed! Is the Stemma bus connected? It would seem not.")
+        return None
 
     # For fun
     showI2Cbus()
@@ -246,6 +250,16 @@ def map_and_scale(inValue, lowIn, highIn, lowOut, highOut):
     return lowOut + frac * (highOut-lowOut)
 
 
+'''
+    An error handler for major errors, like hardware init issues.
+    Perhaps flash an LED (which one? - the ones on the Feather are inside the case now!)
+'''
+def showFatalErrorAndHalt(errorMessage: str):
+    print(f"\n\nFATAL ERROR: {errorMessage}\nStopping.\n")
+    while True:
+        pass
+
+
 # --------------------------------------------------
 # ------------------- begin main -------------------
 def main():
@@ -257,9 +271,13 @@ def main():
     print("supervisor.runtime.autoreload = False")
 
     # Initialize the hardware, dying if something critical is missing.
+    # Just plain None back is super bad.
     #
-    tof_A, tof_B, gestureSensor, display, amp, wheel, wheelButton, wheelLED = init_hardware()
-
+    hw_result = init_hardware()
+    if hw_result is None:
+        showFatalErrorAndHalt("init_hardware failed!")
+    tof_A, tof_B, gestureSensor, display, amp, wheel, wheelButton, wheelLED = hw_result
+    
     # What missing hardware can we tolerate?
 
     # Check only for the two really, really required things?
