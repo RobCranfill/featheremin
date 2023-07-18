@@ -22,11 +22,11 @@ from digitalio import DigitalInOut, Direction
 from adafruit_vl53l0x import VL53L0X
 
 MESSAGE_TEXT_COLOR = 0xFF0000
-STATUS_TEXT_COLOR = 0X000000
+STATUS_TEXT_COLOR  = 0X000000
 
-FONT_TO_LOAD = "./SFDigitalReadout-Medium-24.bdf"
-BACKGROUND_BITMAP = "./background.bmp"
-SPRITE_BITMAP = "./led_sprite_sheet.bmp"
+FONT_TO_LOAD        = "./SFDigitalReadout-Medium-24.bdf"
+BACKGROUND_BITMAP   = "./background.bmp"
+SPRITE_BITMAP       = "./led_sprite_sheet.bmp"
 
 
 '''
@@ -58,6 +58,9 @@ class FeathereminDisplay:
         if p_show_background:
             try:
                 bitmap, palette = adafruit_imageload.load(BACKGROUND_BITMAP, bitmap=displayio.Bitmap, palette=displayio.Palette)
+
+                # FIXME: why do I have to set this here? isn't this global, so to speak?
+                MESSAGE_TEXT_COLOR = 0xFF0000 # red
             except:
                 print("Can't load background bitmap?")
                 # TODO: what to do if construction fails?
