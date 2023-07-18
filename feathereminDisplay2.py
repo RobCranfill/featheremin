@@ -24,7 +24,10 @@ from adafruit_vl53l0x import VL53L0X
 MESSAGE_TEXT_COLOR = 0xFF0000
 STATUS_TEXT_COLOR = 0X000000
 
-FONT_TO_LOAD = "SFDigitalReadout-Medium-24.bdf"
+FONT_TO_LOAD = "./SFDigitalReadout-Medium-24.bdf"
+BACKGROUND_BITMAP = "./background.bmp"
+SPRITE_BITMAP = "./led_sprite_sheet.bmp"
+
 
 '''
     The display object.
@@ -32,8 +35,9 @@ FONT_TO_LOAD = "SFDigitalReadout-Medium-24.bdf"
 '''
 class FeathereminDisplay:
 
-    def __init__(self, p_rotation, boardPinCS, boardPinDC, boardPinReset) -> None:
+    def __init__(self, p_rotation, p_show_background, boardPinCS, boardPinDC, boardPinReset) -> None:
 
+        self.init_OK = False
         self.text_area_1_ = None
         self.text_area_2_ = None
         self.text_area_3_ = None
@@ -47,23 +51,33 @@ class FeathereminDisplay:
             display = adafruit_ili9341.ILI9341(display_bus, width=320, height=240, rotation=p_rotation)
         except:
             print("No ILI9341 display found?")
-            # FIXME: what to do if construction fails?
+            # TODO: what to do if construction fails?
             return
 
-        bitmap, palette = adafruit_imageload.load("/background.bmp",
-                                                    bitmap=displayio.Bitmap,
-                                                    palette=displayio.Palette)
+        bitmap, palette = None, None
+        if p_show_background:
+            try:
+                bitmap, palette = adafruit_imageload.load(BACKGROUND_BITMAP, bitmap=displayio.Bitmap, palette=displayio.Palette)
+            except:
+                print("Can't load background bitmap?")
+                # TODO: what to do if construction fails?
+                return
+        else:
+            bitmap = displayio.Bitmap(320, 240, 1)
+            palette = displayio.Palette(1)
+            palette[0] = 0x0000FF  # blue
+            MESSAGE_TEXT_COLOR = 0x000000 # black
 
-        tile_grid = displayio.TileGrid(bitmap, pixel_shader=palette) # Create a TileGrid to hold the bitmap
-        background_group = displayio.Group() # Create a Group to hold the TileGrid
-        background_group.append(tile_grid) # Add the TileGrid to the Group
-        display.show(background_group) # Add the Group to the Display
+        tile_grid = displayio.TileGrid(bitmap, pixel_shader=palette)    # Create a TileGrid to hold the bitmap
+        background_group = displayio.Group()                            # Create a Group to hold the TileGrid
+        background_group.append(tile_grid)                              # Add the TileGrid to the Group
+        display.show(background_group)                                  # Add the Group to the Display
 
 
         font = None
         fontScale = 2
         try:
-            font = bitmap_font.load_font("/" + FONT_TO_LOAD)
+            font = bitmap_font.load_font(FONT_TO_LOAD)
             fontScale = 1
         except:
             print("Can't load custom font!")
@@ -94,9 +108,9 @@ class FeathereminDisplay:
         background_group.append(text_group)
 
         # Load the sprite sheet bitmap
-        sprite_sheet, led_palette = adafruit_imageload.load("/led_sprite_sheet.bmp",
-                                                        bitmap=displayio.Bitmap,
-                                                        palette=displayio.Palette)
+        sprite_sheet, led_palette = adafruit_imageload.load(SPRITE_BITMAP,
+                                                            bitmap=displayio.Bitmap,
+                                                            palette=displayio.Palette)
         
         # The color we want to be transparent seems to be the last one in the palette.
         # Is this always true?
@@ -116,6 +130,8 @@ class FeathereminDisplay:
         led_group.y = 203
 
         background_group.append(led_group)
+
+        self.init_OK = True
 
     # end __init__
 

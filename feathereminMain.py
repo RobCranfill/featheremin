@@ -27,7 +27,7 @@ from adafruit_apds9960.apds9960 import APDS9960
 from adafruit_seesaw import seesaw, rotaryio, digitalio, neopixel
 
 # Other Featheremin modules
-import feathereminDisplay9341 as fDisplay
+import feathereminDisplay2 as fDisplay
 import featherSynth5 as fSynth
 
 # No 'enum' in circuitpython! :-(
@@ -100,6 +100,14 @@ def init_hardware() -> tuple[adafruit_vl53l0x.VL53L0X,   # 'A' ToF sensor
 
     # For fun
     showI2Cbus()
+
+
+
+    # ----------------- Our display object - do this early so we can show errors?
+    display = fDisplay.FeathereminDisplay(180, False, TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET)
+    print("Display init OK")
+
+
 
     # ----------------- VL53L0X time-of-flight sensor 
     # We will finish setting this sensor up 
@@ -178,9 +186,6 @@ def init_hardware() -> tuple[adafruit_vl53l0x.VL53L0X,   # 'A' ToF sensor
     except:
         print("**** No APDS9960? Continuing....")
 
-    # ----------------- Our display object
-    display = feathereminDisplay2.FeathereminDisplay(180, TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET)
-    print("Display init OK")
 
     # ------------------ MAX9744 amp, if any
     # TODO: merge this into the Synth object? Or at least hand it to that object to use?
