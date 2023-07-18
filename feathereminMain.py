@@ -27,7 +27,7 @@ from adafruit_apds9960.apds9960 import APDS9960
 from adafruit_seesaw import seesaw, rotaryio, digitalio, neopixel
 
 # Other Featheremin modules
-import feathereminDisplay2 as fDisplay
+
 import featherSynth5 as fSynth
 
 # No 'enum' in circuitpython! :-(
@@ -50,6 +50,12 @@ AUDIO_OUT_I2S_WORD = board.D10
 AUDIO_OUT_I2S_DATA = board.D11
 
 # TFT display
+USE_SIMPLE_DISPLAY = True
+if USE_SIMPLE_DISPLAY:
+    import feathereminDisplay1 as fDisplay
+else:
+    import feathereminDisplay2 as fDisplay
+
 TFT_DISPLAY_CS    = board.A2
 TFT_DISPLAY_DC    = board.A0
 TFT_DISPLAY_RESET = board.A1
@@ -102,9 +108,13 @@ def init_hardware() -> tuple[adafruit_vl53l0x.VL53L0X,   # 'A' ToF sensor
     showI2Cbus()
 
 
-
+    # FIXME: how do we do overloaded contsructors???
+    if USE_SIMPLE_DISPLAY:
     # ----------------- Our display object - do this early so we can show errors?
-    display = fDisplay.FeathereminDisplay(180, False, TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET)
+        display = fDisplay.FeathereminDisplay(180, TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET)
+    else:
+        display = fDisplay.FeathereminDisplay(180, False, TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET)
+
     print("Display init OK")
 
 

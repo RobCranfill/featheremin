@@ -20,8 +20,8 @@ import sys
 from digitalio import DigitalInOut, Direction
 from adafruit_vl53l0x import VL53L0X
 
-# TODO: just call this a "FeathereminDisplay" object ?
-class FeathereminDisplay9341:
+# Implements the FeathereminDisplay class:
+class FeathereminDisplay:
 
     def __init__(self, p_rotation, boardPinCS, boardPinDC, boardPinReset) -> None:
 
