@@ -87,8 +87,11 @@ class FeatherSynth:
         self._drone1 = None
         self._drone2 = None
 
-
+        
     def setVolume(self, level):
+        """
+        Volume, from 0.0 to 1.0
+        """
         self._mixer.voice[0].level = level
 
     # setters for waveform

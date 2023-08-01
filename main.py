@@ -2,13 +2,13 @@
 # That is, the main project file or maybe test code.
 
 # ----------------------------------------------------
-# import supervisor
-# supervisor.runtime.autoreload = False  # CirPy 8 and above
-# #supervisor.disable_autoreload()  # CirPy 7 and below
+import supervisor
+supervisor.runtime.autoreload = False  # CirPy 8 and above
 
-# ----------------------------------------------------
-# This runs my main project code:
+# # ----------------------------------------------------
+# # This runs the main project code:
 import feathereminMain
+print("Feateremin test done.")
 while True:
     pass
 
@@ -20,6 +20,17 @@ while True:
 import sys
 sys.path.insert(0, 'test')
 
+# import banner
+# b = banner.Banner()
+# b.test("You are a ....")
+# print("Fuk")
+# while True:
+#     pass
+
+import test_feathereminDisp
+# import test_display2
+# import test_bitmap
+# import test_range_and_sound
 # import test_2_L0Xs # currently fails, due to HW issue
 # import test_drone_synthio_I2S
 # import test_TFT22 # basic display test

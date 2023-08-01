@@ -3,7 +3,6 @@
 """
 import array
 import audiocore
-# import audiopwmio
 import board
 import busio
 import digitalio as feather_digitalio
@@ -33,16 +32,11 @@ import featherSynth5 as fSynth
 # No 'enum' in circuitpython! :-(
 WAVEFORM_TYPES = ["Square", "Sine", "Saw"]
 LFO_MODES = ["LFO Off", "Tremolo", "Vibrato", "Drone"]
-lfo_tremolo_freq = 15
-lfo_vibrato_freq =  4
 
 # GPIO pins used:
 # The GPIO pin we use to turn the 'primary' ("A") ToF sensor off,
 # so we can re-program the address of the secondary one.
 L0X_A_RESET_OUT = board.D4
-
-# for PWM audio output
-AUDIO_OUT_PIN = board.D5
 
 # for I2S audio out
 AUDIO_OUT_I2S_BIT  = board.D9
@@ -66,7 +60,7 @@ L0X_B_ALTERNATE_I2C_ADDR = 0x30
 ROTARY_ENCODER_I2C_ADDR = 0x36
 SEE_SAW_BUTTON_PIN_WTF = 24  # FIXME: wtf is this magic number?
 
-INITIAL_AMP_VOLUME = 10 # 25 is max for 20W amp and 3W 4 ohm speaker with 12v to amp.
+INITIAL_20W_AMP_VOLUME = 10 # 25 is max for 20W amp and 3W 4 ohm speaker with 12v to amp.
 
 
 def showI2Cbus():
@@ -79,7 +73,7 @@ def showI2Cbus():
 def init_hardware() -> tuple[adafruit_vl53l0x.VL53L0X,   # 'A' ToF sensor
                             adafruit_vl53l0x.VL53L0X,    # 'B' ToF sensor
                             APDS9960,                    # gesture sensor
-                            fDisplay.FeathereminDisplay9341, # our display object
+                            fDisplay.FeathereminDisplay, # our display object
                             adafruit_max9744.MAX9744,    # big amplifier, or None
                             rotaryio.IncrementalEncode,  # rotary encoder
                             digitalio.DigitalIO,         # pushbutton in rotary encoder
@@ -102,7 +96,7 @@ def init_hardware() -> tuple[adafruit_vl53l0x.VL53L0X,   # 'A' ToF sensor
         i2c = board.STEMMA_I2C()
     except:
         print("board.STEMMA_I2C failed! Is the Stemma bus connected? It would seem not.")
-        return None
+        return tuple()
 
     # For fun
     showI2Cbus()
@@ -116,7 +110,6 @@ def init_hardware() -> tuple[adafruit_vl53l0x.VL53L0X,   # 'A' ToF sensor
         display = fDisplay.FeathereminDisplay(180, False, TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET)
 
     print("Display init OK")
-
 
 
     # ----------------- VL53L0X time-of-flight sensor 
@@ -202,10 +195,10 @@ def init_hardware() -> tuple[adafruit_vl53l0x.VL53L0X,   # 'A' ToF sensor
     amp = None
     try:
         amp = adafruit_max9744.MAX9744(i2c)
-        amp.volume = INITIAL_AMP_VOLUME
+        amp.volume = INITIAL_20W_AMP_VOLUME
         print("MAX9744 amp init OK")
     except Exception as e:
-        print(f"**** No MAX9744 amplifier found; {e} \n continuing....")
+        print(f"No MAX9744 amplifier found; {e} OK?")
         amp = None
 
     # ------------------ Rotary encoder
@@ -215,7 +208,7 @@ def init_hardware() -> tuple[adafruit_vl53l0x.VL53L0X,   # 'A' ToF sensor
         seesaw_v = (ss.get_version() >> 16) & 0xFFFF
         # print(f"Found product {seesaw_v}")
         if seesaw_v != 4991:
-            print("**** Wrong Rotary encoder firmware loaded?  Expected 4991")
+            print("Wrong rotary encoder firmware version? Continuing...")
             # what are we supposed to do about this??
         encoder = rotaryio.IncrementalEncoder(ss)
 
@@ -225,8 +218,10 @@ def init_hardware() -> tuple[adafruit_vl53l0x.VL53L0X,   # 'A' ToF sensor
 
         # TODO: tried to do something with the Neopixel but haven't figured anything out yet. :-/
         pixel = neopixel.NeoPixel(ss, 6, 1)
+        
+        pixel.fill(0x000100) # very light green - for go!
         # pixel.brightness = 0.1
-        pixel.fill(0x004000) # green for go!
+
         print("Rotary encoder init OK")
     
     except:
@@ -262,8 +257,7 @@ def clamp(num, min_value, max_value):
 '''
 def map_and_scale(inValue, lowIn, highIn, lowOut, highOut):
     frac = (inValue-lowIn)/(highIn-lowIn)
-    return lowOut + frac * (highOut-lowOut)
-
+    return lowOut + frac*(highOut-lowOut)
 
 '''
     An error handler for major errors, like hardware init issues.
@@ -277,6 +271,7 @@ def showFatalErrorAndHalt(errorMessage: str):
 
 # --------------------------------------------------
 # ------------------- begin main -------------------
+# --------------------------------------------------
 def main():
     print("\nHello, Featheremin!\n")
 
@@ -313,9 +308,10 @@ def main():
     # My "synthezier" object that does the stuff that I need.
     #
     # synth = featherSynth5.FeatherSynth(AUDIO_OUT_PIN)
-    synth = fSynth.FeatherSynth(
-        i2s_bit_clock=AUDIO_OUT_I2S_BIT, i2s_word_select=AUDIO_OUT_I2S_WORD, i2s_data=AUDIO_OUT_I2S_DATA)
-    synth.setVolume(0.1)
+    synth = fSynth.FeatherSynth(i2s_bit_clock=AUDIO_OUT_I2S_BIT, 
+                                i2s_word_select=AUDIO_OUT_I2S_WORD, 
+                                i2s_data=AUDIO_OUT_I2S_DATA)
+    synth.setVolume(0.75)
 
     waveIndex = 0
     waveName  = WAVEFORM_TYPES[waveIndex]
@@ -342,8 +338,23 @@ def main():
 
     wheelButtonHeld = False
 
+    neoState = False
+    # neoCount = 0
+    # NEO_THRESH = 20
+    neoTime = time.monotonic_ns()
+
+
     # ==== Main loop ===============================================================
     while True:
+
+        # neoCount += 1
+        # if neoCount == NEO_THRESH:
+        #     neoCount = 0
+        if time.monotonic_ns() - neoTime > 10e7:
+            # print(f"delta {time.monotonic_ns() - neoTime}")
+            neoTime = time.monotonic_ns()
+            neoState = not neoState
+            wheelLED.fill(0x000100 if neoState else 0x0)
 
         # TODO: tidy up all this gesture-handling stuff
 
@@ -464,9 +475,15 @@ def main():
                      # map to 8-16?
                     trem = map_and_scale(r2, 50, 500, 8, 16)
                     print(f"r2 {r2} -> trem {trem}")
+                    displayLFOMode(display, f"Tremolo @ {trem:.1f}")
                     synth.setTremolo(trem)
+
                 elif lfoIndex == 2:
-                    synth.setVibrato(r2a) # map to 4-10?
+                    # map to 4-10?
+                    vib = map_and_scale(r2, 50, 500, 4, 10)
+                    synth.setVibrato(r2a) 
+                    print(f"r2 {r2} -> vib ?")
+                    displayLFOMode(display, f"Vibrato @ {vib:.1f}")
 
             # drone mode
             if lfoIndex == 3:
