@@ -194,7 +194,7 @@ class FeatherSynth:
 
 
     def test_drone(self, n):
-        print("FeatherSynth6.test() with GC fix...")
+        print(f"{__class__.__name__}.test() (from {__file__})...")
 
         # test drone mode
         v = 0.1
