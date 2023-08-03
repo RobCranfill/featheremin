@@ -4,9 +4,12 @@
 ##
 
 import board
-import adafruit_vl53l0x
+import adafruit_vl53l0x as vl32l0x
 import digitalio as feather_digitalio
 import time
+
+# our synth object, or one of them:
+import featherSynth6 as fSynth
 
 
 # GPIO pins
@@ -25,7 +28,6 @@ AUDIO_OUT_I2S_DATA = board.D11
 L0X_B_ALTERNATE_I2C_ADDR = 0x30
 
 
-
 def showI2Cbus():
     i2c = board.I2C()
     if i2c.try_lock():
@@ -33,10 +35,9 @@ def showI2Cbus():
         i2c.unlock()
 
 
-def init_hardware():
-
-    # Easist way to init I2C on a Feather:
-    i2c = board.STEMMA_I2C()
+""" Initialize the ToF sensors
+"""
+def init_sensors(i2c) -> tuple[vl32l0x.VL53L0X, vl32l0x.VL53L0X]:
 
     # ----------------- 'Primary' VL53L0X time-of-flight sensor 
     # We have wired a GPIO line to this sensor so we can temporarily turn it off.
@@ -57,12 +58,12 @@ def init_hardware():
     # First, see if it's there with the new address (left over from a previous run).
     # If so, we don't need to re-assign it.
     try:
-        L0X_B = adafruit_vl53l0x.VL53L0X(i2c, address=L0X_B_ALTERNATE_I2C_ADDR)
+        L0X_B = vl32l0x.VL53L0X(i2c, address=L0X_B_ALTERNATE_I2C_ADDR)
         print(f"Found secondary VL53L0X at {hex(L0X_B_ALTERNATE_I2C_ADDR)}; OK")
     except:
         print(f"Did not find secondary VL53L0X at {hex(L0X_B_ALTERNATE_I2C_ADDR)}, trying default....")
         try:
-            L0X_B = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
+            L0X_B = vl32l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
             print(f"Found VL53L0X at default address; setting to {hex(L0X_B_ALTERNATE_I2C_ADDR)}...")
             L0X_B.set_address(L0X_B_ALTERNATE_I2C_ADDR)  # address assigned should NOT be already in use
             print("VL53L0X set_address OK")
@@ -78,7 +79,7 @@ def init_hardware():
     print("Turning primary VL53L0X back on...")
     L0X_A_reset.value = True
     try:
-        L0X_A = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
+        L0X_A = vl32l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
         print("'Primary' VL53L0X init OK")
 
         # a higher speed but less accurate timing budget of 20ms:
@@ -91,12 +92,34 @@ def init_hardware():
     # end init_hardware
 
 
+def init_audio():
+
+    stereo = True
+
+    # synth = featherSynth5.FeatherSynth(AUDIO_OUT_PIN)
+    synth = fSynth.FeatherSynth(stereo,
+                                i2s_bit_clock=AUDIO_OUT_I2S_BIT, 
+                                i2s_word_select=AUDIO_OUT_I2S_WORD, 
+                                i2s_data=AUDIO_OUT_I2S_DATA)
+    
+    return synth
+
+
 # main
-L0X_A, L0X_B = init_hardware()
+
+i2c = board.STEMMA_I2C()
+
+L0X_A, L0X_B = init_sensors(i2c)
+
+synth = init_audio()
 
 print("Bus to start: ")
 showI2Cbus()
 
+# synth.test(5)
+synth.test_phat_2()
+while True:
+    pass
 
 while True:
     r1 = L0X_A.range

@@ -51,13 +51,13 @@ _synth = synthio.Synthesizer(sample_rate=SYNTH_RATE, envelope=env)
 _audio.play(_mixer)
 _mixer.voice[0].play(_synth)
 
-f1 = 300
+f1 = 3000
 
 note1 = synthio.Note(frequency=f1, amplitude=1, bend=1)
 note2 = synthio.Note(frequency=f1, amplitude=1, bend=1)
 _synth.press((note1,note2))
 
-delay = 0.5
+delay = 0.05
 
 while True:
     print("up!")
