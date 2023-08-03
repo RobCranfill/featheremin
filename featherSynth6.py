@@ -193,7 +193,7 @@ class FeatherSynth:
 # ---------------- class test methods
 
 
-    def test(self, n):
+    def test_drone(self, n):
         print("FeatherSynth6.test() with GC fix...")
 
         # test drone mode
@@ -215,17 +215,48 @@ class FeatherSynth:
         self.deinit()
         return
     
-        # # create a sawtooth sort of 'song', like a siren, with non-integer midi notes
-        # start_note = 65
-        # song_notes = numpy.arange(0, 20, 0.1)
-        # song_notes = numpy.concatenate((song_notes, numpy.arange(20, 0, -0.1)), axis=0)
-        # delay = 0.02
 
-        # # integer version
-        # start_note = 65
-        # song_notes = numpy.arange(0, 20, 1)
-        # song_notes = numpy.concatenate((song_notes, numpy.arange(20, 0, -1)), axis=0)
-        # delay = 0.2
+    # create a sawtooth sort of 'song', like a siren, with non-integer midi notes
+    def test_sawtooth(self):
+
+        start_note = 65
+        song_notes = numpy.arange(0, 20, 0.1)
+        song_notes = numpy.concatenate((song_notes, numpy.arange(20, 0, -0.1)), axis=0)
+        delay = 0.02
+
+        while True:
+            for n in song_notes:
+                self.play(start_note + n)
+                time.sleep(delay)
+            time.sleep(1) # hold last note for one more beat
+            self.stop()
+            time.sleep(1)
+    
+
+    # integer version
+    def test_sawtooth_int(self):
+
+        start_note = 65
+        song_notes = numpy.arange(0, 20, 1)
+        song_notes = numpy.concatenate((song_notes, numpy.arange(20, 0, -1)), axis=0)
+        delay = 0.2
+
+        # after 'tiny lfo song' by @todbot
+        start_note = 65
+        song_notes = (+3, 0, -2, -3, -2, 0, -2, -3)
+        delay = 1
+
+        while True:
+            for n in song_notes:
+                self.play(start_note + n)
+                time.sleep(delay)
+            time.sleep(1) # hold last note for one more beat
+            self.stop()
+            time.sleep(1)
+    
+
+    # test tremolo and vibrato
+    def test_trem_and_vib(self):
 
         # after 'tiny lfo song' by @todbot
         start_note = 65
@@ -236,7 +267,6 @@ class FeatherSynth:
         while True:
             print(f"Playing #{i}...")
 
-            # test tremolo and vibrato
             if i%4 == 1:
                 self.clearTremolo()
                 self.clearVibrato()
@@ -258,8 +288,6 @@ class FeatherSynth:
             time.sleep(1)
 
             i += 1
-
-
 
 
     def test_phat_2(self):
