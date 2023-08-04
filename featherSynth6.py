@@ -193,13 +193,17 @@ class FeatherSynth:
 # ---------------- class test methods
 
 
-    def test_drone(self, n):
+    """ Runs numIter times then returns.
+    """
+    def test_drone(self, numIter):
+
         print(f"{__class__.__name__}.test() (from {__file__})...")
+        print(f"Testing drone mode {numIter} times....")
 
         # test drone mode
         v = 0.1
-        for i in range(n, 0, -1):
-            print(f"Testing drone mode #{i}....")
+        for i in range(numIter, 0, -1):
+            print(f"  {i}....")
             f1 = 300
             self.setVolume(v)
             v = v + 0.1
@@ -219,9 +223,9 @@ class FeatherSynth:
     # create a sawtooth sort of 'song', like a siren, with non-integer midi notes
     def test_sawtooth(self):
 
-        start_note = 65
         song_notes = numpy.arange(0, 20, 0.1)
         song_notes = numpy.concatenate((song_notes, numpy.arange(20, 0, -0.1)), axis=0)
+        start_note = 65
         delay = 0.02
 
         while True:
@@ -236,9 +240,9 @@ class FeatherSynth:
     # integer version
     def test_sawtooth_int(self):
 
-        start_note = 65
         song_notes = numpy.arange(0, 20, 1)
         song_notes = numpy.concatenate((song_notes, numpy.arange(20, 0, -1)), axis=0)
+        start_note = 65
         delay = 0.2
 
         # after 'tiny lfo song' by @todbot
@@ -259,13 +263,14 @@ class FeatherSynth:
     def test_trem_and_vib(self):
 
         # after 'tiny lfo song' by @todbot
-        start_note = 65
         song_notes = (+3, 0, -2, -3, -2, 0, -2, -3)
+        start_note = 65
         delay = 1
 
         i = 1
         while True:
-            print(f"Playing #{i}...")
+
+            print(f"Playing #{i%4}...")
 
             if i%4 == 1:
                 self.clearTremolo()
@@ -288,39 +293,6 @@ class FeatherSynth:
             time.sleep(1)
 
             i += 1
-
-
-    def test_phat_2(self):
-
-        start_note = 65
-        song_notes = (+3, 0, -2, -3, -2, 0, -2, -3)
-        delay = 1
-
-        while True:
-
-            print("fatness 1....")
-            self.setNumOscs(1)
-            for n in song_notes:
-                self.play(start_note + n)
-                time.sleep(delay)
-            
-            print("fatness 2....")
-            self.setNumOscs(2)
-            for n in song_notes:
-                self.play(start_note + n)
-                time.sleep(delay)
-            
-            print("fatness 3....")
-            self.setNumOscs(3)
-            for n in song_notes:
-                self.play(start_note + n)
-                time.sleep(delay)
-            
-            print("fatness 4....")
-            self.setNumOscs(4)
-            for n in song_notes:
-                self.play(start_note + n)
-                time.sleep(delay)
 
 
     """
@@ -358,3 +330,18 @@ class FeatherSynth:
             # increment number of detuned oscillators
             num_oscs = num_oscs+1 if num_oscs < 5 else 1
 
+
+    def test_phat_2(self):
+
+        song_notes = (+3, 0, -2, -3, -2, 0, -2, -3)
+        start_note = 65
+        delay = 1
+
+        while True:
+            for numOscs in (1, 2, 3, 4):
+
+                print(f"fatness {numOscs}....")
+                self.setNumOscs(numOscs)
+                for n in song_notes:
+                    self.play(start_note + n)
+                    time.sleep(delay)
