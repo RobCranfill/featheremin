@@ -1,5 +1,5 @@
 # featheramin
-A microcontroller-based theremin using CicuitPython and two LiDAR range detectors. 
+A microcontroller-based theremin using CircuitPython and two LiDAR range detectors. 
 
 This project uses the new, amazing, and very cool "synthio" package. 
 There are so many great features in there that it's hard to know what to include and what not to. 
@@ -15,21 +15,18 @@ So far, almost all components are from [Adafruit](https://www.adafruit.com). I l
  * APDS-9960 proximity/gesture sensor
  * 2.2" TFT display
  * I'm still trying to figure out how to amplify this. I've used:
-   * 3 watt I2S amp (the current configuration, as I2S yields better audio)
+   * Generic/clone [Amazon](https://a.co/d/77fnhnu) PCM5102 I2S line out breakout board (current solution)
+     * Currently I am running this line out into a pair of small desktop speakers (Creative Pebble), which works well.
+   * 3 watt I2S amp
    * 1 watt STEMMA audio amplifier with speaker
    * 20 watt audio amp with external speaker
  * A TRS 1/8" headphone connector (that's stereo but so far this thing is mono)
- * a big breadboard and miscellaneous other stuff to put them together.
+ * A case, breadboard and miscellaneous other stuff to put them together.
 
 ## Software required
- * Adafruit CircuitPython 8.2.0 (8.2.x required for new 'synthio' stuff)
+ * Latest Adafruit CircuitPython: 8.2.2 (8.2.x required for new 'synthio' stuff)
  * The following Adafruit support libraries; use 'circup' to install?
-   * THIS LIST IS IN FLUX
-   * adafruit_vl53l0x.mpy
-   * adafruit_apds9960
-   * adafruit_bus_device
-   * adafruit_register
-   * adafruit_max9744
+   * <i>TBD</i>
 
 ## Dev environment
 I have been using Visual Studio Code for my IDE but I don't think that matters. I have the CircuitPython extension installed, which is nice, but it is only somewhat functional as I also have my VS Code running in WSL2, which breaks some things. YMMV.
@@ -37,14 +34,13 @@ I have been using Visual Studio Code for my IDE but I don't think that matters. 
 Note: The main code is in a file called "feathereminMain.py"; if you simply "include" this in your main.py, it will run. This is how I test various other modules - by incudling the code I want to run/test in main.py, rather than having to rename entire files to "main.py".
 
 ## Hardware config
-The I2C devices are chained together in no particular order, but the 20W amplifier, when I have it connected, 
-must be last in the chain because it has no StemmaQT connector and is attached via a StemmaQT pigtail.
+The I2C devices are chained together in no particular order, but the 20W amplifier, if used,
+must be last in the chain because it has no StemmaQT connector and is attached via a StemmaQT pigtail. 
+(It uses I2C to set volume only, not for audio data.)
 
 The ILI9341 display is wired to the Feather's hardware SPI interface via 6 wires (plus ground and 3.3v).
 
-One of the VL53L0Xs XSHUT pin is connected to a GPIO output pin so we can re-assign its I2C address.
-
-<strike>Currently, the PWM GPIO pin (see the code for which one) goes to the headphone jack. Alternatively it can go to the input of whatever amplfier you are using.</strike>
+One of the VL53L0X's XSHUT pin is connected to a GPIO output pin so we can re-assign its I2C address.
 
 
 ## Functionality
@@ -62,10 +58,11 @@ One of the VL53L0Xs XSHUT pin is connected to a GPIO output pin so we can re-ass
    * Wheel: delay time
    * Wheel push: chromatic/continuous (/other - volume?)
    * Display
-     * High-quality background that we can paint info onto
+     * High-quality background that we can paint info onto - DONE, BUT USES TOO MUCH MEMORY?
        * Pseudo alphanumeric LED area for text
        * Pseudo single LEDs for status (chromatic, etc)
        * TODO: Bar graphs? Meters?!
+       
 
 ## Things to do (some of which are done - or abandoned):
  * 3 modes? diatonic, chromatic, continuous
@@ -83,27 +80,38 @@ One of the VL53L0Xs XSHUT pin is connected to a GPIO output pin so we can re-ass
      * continuous .vs. 'chunked'
        * different scales for chunk mode?
    * Waveform
-     * Sine, Square, Triangle, other??
-     * Can I *load* interesting waveforms?
+     * Sine, Square, Saw - done
+     * Triangle up/down
+     * Other??
+     * Can we *load* interesting waveforms?
    * Refresh/pause rate
  * Control Gadgets
    * Hardware volume?
    * Kill/reset switch? (There is one on the Feather but it's inside the box!)
- * Future?
-   * Stereo
-   * Line out
  * Errors
    * Flash an LED (which one?) in some error pattern.
-     * Bring an LED out to ? - top of box?
+     * Bring an LED out to ? - top of box? The one on the rotary encoder? (Not quite visible)
+  * Stereo - implemented, although not used much at all
 
 
 ## Notes
-### Pinouts/connections for MAX98357A I2S amplifier breakout
-| Pico   | Max98357A |
+
+### Pinouts/connections for PCM5102 I2S line out breakout
+| RP2040 | PCM5102 |
+| ------ | ------- |
+| D9     | BCK     |
+| D10    | LCK     |
+| D11    | DIN     |
+| GND    | SCK     | 
+
+
+### Pinouts/connections for MAX98357A I2S amplifier breakout (not currently used)
+| RP2040 | Max98357A |
 | ------ | --------- |
 | D9     | BCLK      |
 | D10    | LRC       |
 | D11    | DIN       |
+
 
 ### Pinouts for Adafruit 2.2" TFT and EyeSPI breakout
 Pretty obvious now, but I'll document it just for fun. 
