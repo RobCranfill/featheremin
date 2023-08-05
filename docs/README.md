@@ -1,8 +1,6 @@
 # featheramin
 A microcontroller-based theremin using CicuitPython and two LiDAR range detectors. 
 
-poop
-
 This project uses the new, amazing, and very cool "synthio" package. 
 There are so many great features in there that it's hard to know what to include and what not to. 
 So as a design goal, this theremin project will try to keep it simple, 
