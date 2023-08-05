@@ -25,8 +25,23 @@ So far, almost all components are from [Adafruit](https://www.adafruit.com). I l
 
 ## Software required
  * Latest Adafruit CircuitPython: 8.2.2 (8.2.x required for new 'synthio' stuff)
- * The following Adafruit support libraries; use 'circup' to install?
-   * <i>TBD</i>
+ * The following Adafruit support libraries; use 'circup' to install? The following is the output from the circup 'freeze' command at one particular point in time; you may as well use the latest-and-greatest.
+```
+circup freeze
+Found device at /media/rob/CIRCUITPY, running CircuitPython 8.2.2.
+adafruit_vl53l0x==3.6.9
+adafruit_max9744==1.2.15
+adafruit_pixelbuf==2.0.2
+adafruit_ili9341==1.3.10
+adafruit_bus_device==5.2.6
+adafruit_apds9960==3.1.8
+adafruit_register==1.9.16
+adafruit_seesaw==1.14.0
+adafruit_bitmap_font==2.0.1
+adafruit_display_text==3.0.0
+```
+
+
 
 ## Dev environment
 I have been using Visual Studio Code for my IDE but I don't think that matters. I have the CircuitPython extension installed, which is nice, but it is only somewhat functional as I also have my VS Code running in WSL2, which breaks some things. YMMV.
