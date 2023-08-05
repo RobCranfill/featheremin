@@ -191,8 +191,6 @@ class FeatherSynth:
 # all these make some noise, then return, so you can chain them together as desired.
 
 
-    """ Runs numIter times then returns.
-    """
     def test_drone(self):
 
         print(f"Testing drone mode (and volume) ....")
@@ -210,12 +208,9 @@ class FeatherSynth:
                 self.drone(f1, f1+delta)
                 time.sleep(0.02)
             self.stopDrone()
-        print("DONE Testing drone mode")
-        
-        # Oh, don't do this!
-        # self.deinit()
 
-        return
+        self.stop()
+        print("DONE Testing drone mode")
     
 
     def test_melody(self):
@@ -238,7 +233,6 @@ class FeatherSynth:
         time.sleep(1) # hold last note for one more beat
 
         self.stop()
-
         print("DONE Testing melody")
     
 
@@ -266,7 +260,7 @@ class FeatherSynth:
     # test tremolo and vibrato
     def test_trem_and_vib(self):
 
-        print(f"Testing tremelo and vibrato)....")
+        print(f"Testing tremelo and vibrato....")
 
         # after 'tiny lfo song' by @todbot
         song_notes = (+3, 0, -2, -3, -2, 0, -2, -3)

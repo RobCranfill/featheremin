@@ -18,11 +18,11 @@ synth = fsynth.FeatherSynth(
 
 # synth.setVolume(0.5)
 
-# synth.test_drone()
-# synth.test_siren()
-# synth.test_melody()
-# synth.test_trem_and_vib()
-# synth.test_phat()
+synth.test_melody()
+synth.test_trem_and_vib()
+synth.test_siren()
+synth.test_drone()
+synth.test_phat()
 synth.test_phat_2()
 
 
