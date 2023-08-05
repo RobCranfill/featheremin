@@ -188,13 +188,13 @@ class FeatherSynth:
 
 
 # ---------------- class test methods
+# all these make some noise, then return, so you can chain them together as desired.
 
 
     """ Runs numIter times then returns.
     """
     def test_drone(self):
 
-        print(f"{__class__.__name__}.test() (from {__file__})...")
         print(f"Testing drone mode (and volume) ....")
 
         for i in (10, 20, 40, 60, 80, 100): # percent
@@ -210,7 +210,7 @@ class FeatherSynth:
                 self.drone(f1, f1+delta)
                 time.sleep(0.02)
             self.stopDrone()
-        print("DONE Testing drone mode....")
+        print("DONE Testing drone mode")
         
         # Oh, don't do this!
         # self.deinit()
@@ -218,32 +218,9 @@ class FeatherSynth:
         return
     
 
-    # create a sawtooth sort of 'song', like a siren, with non-integer midi notes
-    def test_sawtooth(self):
+    def test_melody(self):
 
-        print(f"{__class__.__name__}.test() (from {__file__})...")
-        print(f"Testing sawtooth 'siren'....")
-
-        song_notes = numpy.arange(0, 20, 0.1)
-        song_notes = numpy.concatenate((song_notes, numpy.arange(20, 0, -0.1)), axis=0)
-        start_note = 65
-        delay = 0.02
-
-        for i in range(4):
-            for n in song_notes:
-                self.play(start_note + n)
-                time.sleep(delay)
-            time.sleep(1) # hold last note for one more beat
-            self.stop()
-            time.sleep(1)
-
-        print("DONE Testing sawtooth....")
-        
-
-    def test_melody_int(self):
-
-        print(f"{__class__.__name__}.test() (from {__file__})...")
-        print(f"Testing melody with integers....")
+        print(f"Testing melody....")
 
         song_notes = numpy.arange(0, 20, 1)
         song_notes = numpy.concatenate((song_notes, numpy.arange(20, 0, -1)), axis=0)
@@ -255,20 +232,40 @@ class FeatherSynth:
         song_notes = (+3, 0, -2, -3, -2, 0, -2, -3)
         delay = 1
 
-        while True:
-            for n in song_notes:
-                self.play(start_note + n)
-                time.sleep(delay)
-            time.sleep(1) # hold last note for one more beat
-            self.stop()
-            time.sleep(1)
-        print("DONE Testing melody integer....")
+        for n in song_notes:
+            self.play(start_note + n)
+            time.sleep(delay)
+        time.sleep(1) # hold last note for one more beat
+
+        self.stop()
+
+        print("DONE Testing melody")
     
+
+    # create a sawtooth sort of 'song', like a siren, with non-integer midi notes
+    def test_siren(self):
+
+        print(f"Testing sawtooth 'siren'....")
+
+        song_notes = numpy.arange(0, 20, 0.1)
+        song_notes = numpy.concatenate((song_notes, numpy.arange(20, 0, -0.1)), axis=0)
+        start_note = 65
+        delay = 0.02
+
+        for i in range(4):
+            for n in song_notes:
+                self.play(start_note + n + 5*i)
+                time.sleep(delay)
+            # time.sleep(1) # hold last note for one more beat
+            self.stop()
+            # time.sleep(1)
+
+        print("DONE Testing sawtooth")
+        
 
     # test tremolo and vibrato
     def test_trem_and_vib(self):
 
-        print(f"{__class__.__name__}.test() (from {__file__})...")
         print(f"Testing tremelo and vibrato)....")
 
         # after 'tiny lfo song' by @todbot
@@ -276,21 +273,19 @@ class FeatherSynth:
         start_note = 65
         delay = 1
 
-        i = 1
-        while True:
+        for i in (1, 2, 3, 4):
+            print(f"  test #{i}...")
 
-            print(f"Playing #{i%4}...")
-
-            if i%4 == 1:
+            if i == 1:
                 self.clearTremolo()
                 self.clearVibrato()
-            elif i%4 == 2:
+            elif i == 2:
                 self.setTremolo(15)
                 self.clearVibrato()
-            elif i%4 == 3:
+            elif i == 3:
                 self.clearTremolo()
                 self.setVibrato(8)
-            elif i%4 == 0:
+            elif i == 4:
                 self.setTremolo(25)
                 self.setVibrato(4)
 
@@ -301,9 +296,9 @@ class FeatherSynth:
             self.stop()
             time.sleep(1)
 
-            i += 1
+        self.stop()
+        print("DONE Testing trem/vib")
 
-        print("DONE Testing trem/vib....")
 
     """
         from https://github.com/todbot/circuitpython-synthio-tricks/tree/main#detuning-oscillators-for-fatter-sound
@@ -320,9 +315,9 @@ class FeatherSynth:
         HOLD_TIME = 2.0
         INTER_TIME = 0.1
 
-        while True:
+        for num_oscs in (1, 2, 3, 4):
 
-            print(f"num_oscs: {num_oscs}")
+            print(f"  num_oscs: {num_oscs}")
             notes = []  # holds note objs being pressed
             # simple detune, always detunes up
             for i in range(num_oscs):
@@ -338,21 +333,23 @@ class FeatherSynth:
             # increment number of detuned oscillators
             num_oscs = num_oscs+1 if num_oscs < 5 else 1
 
+        self.stop()
+        print("DONE test_phat")
 
     def test_phat_2(self):
 
-        print(f"{__class__.__name__}.test() (from {__file__})...")
         print(f"Testing phatness #2....")
 
         song_notes = (+3, 0, -2, -3, -2, 0, -2, -3)
         start_note = 65
         delay = 1
 
-        while True:
-            for numOscs in (1, 2, 3, 4):
+        for numOscs in (1, 2, 3, 4):
+            print(f"  fatness {numOscs}....")
+            self.setNumOscs(numOscs)
+            for n in song_notes:
+                self.play(start_note + n)
+                time.sleep(delay)
 
-                # print(f"fatness {numOscs}....")
-                self.setNumOscs(numOscs)
-                for n in song_notes:
-                    self.play(start_note + n)
-                    time.sleep(delay)
+        self.stop()
+        print("DONE test_phat_2")
