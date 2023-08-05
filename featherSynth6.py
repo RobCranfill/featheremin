@@ -21,12 +21,9 @@ SYNTH_RATE    = 22050
 SAMPLE_RATE   = 28000
 SAMPLE_SIZE   =   512
 SAMPLE_VOLUME = 32000
-BUFFER_SIZE   =  4 * 1024 # up from 2K; necessary?
+BUFFER_SIZE   =  1024 * 16 # up from 2K; necessary?
 
-# A do-nothing 'BlockInput' for the LFOs
-LFO_NONE = 1.0
-
-
+LFO_NONE = 1.0  # A do-nothing 'BlockInput' for the LFOs
 FAT_DETUNE = 0.005  # how much to detune, 0.7% here
  
 
@@ -195,18 +192,16 @@ class FeatherSynth:
 
     """ Runs numIter times then returns.
     """
-    def test_drone(self, numIter):
+    def test_drone(self):
 
         print(f"{__class__.__name__}.test() (from {__file__})...")
-        print(f"Testing drone mode {numIter} times....")
+        print(f"Testing drone mode (and volume) ....")
 
-        # test drone mode
-        v = 0.1
-        for i in range(numIter, 0, -1):
-            print(f"  {i}....")
+        for i in (10, 20, 40, 60, 80, 100): # percent
+            v = i / 100
+            print(f" {i}%....")
             f1 = 300
             self.setVolume(v)
-            v = v + 0.1
             self.startDrone(f1, f1)
             for delta in range(-100, 100):
                 self.drone(f1, f1+delta)
@@ -216,29 +211,39 @@ class FeatherSynth:
                 time.sleep(0.02)
             self.stopDrone()
         print("DONE Testing drone mode....")
-        self.deinit()
+        
+        # Oh, don't do this!
+        # self.deinit()
+
         return
     
 
     # create a sawtooth sort of 'song', like a siren, with non-integer midi notes
     def test_sawtooth(self):
 
+        print(f"{__class__.__name__}.test() (from {__file__})...")
+        print(f"Testing sawtooth 'siren'....")
+
         song_notes = numpy.arange(0, 20, 0.1)
         song_notes = numpy.concatenate((song_notes, numpy.arange(20, 0, -0.1)), axis=0)
         start_note = 65
         delay = 0.02
 
-        while True:
+        for i in range(4):
             for n in song_notes:
                 self.play(start_note + n)
                 time.sleep(delay)
             time.sleep(1) # hold last note for one more beat
             self.stop()
             time.sleep(1)
-    
 
-    # integer version
-    def test_sawtooth_int(self):
+        print("DONE Testing sawtooth....")
+        
+
+    def test_melody_int(self):
+
+        print(f"{__class__.__name__}.test() (from {__file__})...")
+        print(f"Testing melody with integers....")
 
         song_notes = numpy.arange(0, 20, 1)
         song_notes = numpy.concatenate((song_notes, numpy.arange(20, 0, -1)), axis=0)
@@ -257,10 +262,14 @@ class FeatherSynth:
             time.sleep(1) # hold last note for one more beat
             self.stop()
             time.sleep(1)
+        print("DONE Testing melody integer....")
     
 
     # test tremolo and vibrato
     def test_trem_and_vib(self):
+
+        print(f"{__class__.__name__}.test() (from {__file__})...")
+        print(f"Testing tremelo and vibrato)....")
 
         # after 'tiny lfo song' by @todbot
         song_notes = (+3, 0, -2, -3, -2, 0, -2, -3)
@@ -294,16 +303,15 @@ class FeatherSynth:
 
             i += 1
 
+        print("DONE Testing trem/vib....")
 
     """
         from https://github.com/todbot/circuitpython-synthio-tricks/tree/main#detuning-oscillators-for-fatter-sound
     """
     def test_phat(self):
 
-        # import board, time, audiopwmio, synthio
-        # audio = audiopwmio.PWMAudioOut(board.TX)
-        # synth = synthio.Synthesizer(sample_rate=22050)
-        # audio.play(synth)
+        print(f"{__class__.__name__}.test() (from {__file__})...")
+        print(f"Testing phatness....")
 
         detune = 0.005  # how much to detune, 0.7% here
         num_oscs = 1
@@ -333,6 +341,9 @@ class FeatherSynth:
 
     def test_phat_2(self):
 
+        print(f"{__class__.__name__}.test() (from {__file__})...")
+        print(f"Testing phatness #2....")
+
         song_notes = (+3, 0, -2, -3, -2, 0, -2, -3)
         start_note = 65
         delay = 1
@@ -340,7 +351,7 @@ class FeatherSynth:
         while True:
             for numOscs in (1, 2, 3, 4):
 
-                print(f"fatness {numOscs}....")
+                # print(f"fatness {numOscs}....")
                 self.setNumOscs(numOscs)
                 for n in song_notes:
                     self.play(start_note + n)

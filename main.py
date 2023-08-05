@@ -7,10 +7,10 @@ supervisor.runtime.autoreload = False  # CirPy 8 and above
 
 # # ----------------------------------------------------
 # # This runs the main project code:
-import feathereminMain
-print("Feateremin test done.")
-while True:
-    pass
+# import feathereminMain
+# print("Feateremin test done.")
+# while True:
+#     pass
 
 
 # Other test code, found in ./test directory.
@@ -20,15 +20,11 @@ while True:
 import sys
 sys.path.insert(0, 'test')
 
-# import banner
-# b = banner.Banner()
-# b.test("You are a ....")
-# print("Fuk")
-# while True:
-#     pass
-
-import test_feathereminDisp
 # import test_display2
+import test_feathereminSynth
+# import test_2_L0X_testbed
+
+# import test_feathereminDisp
 # import test_bitmap
 # import test_range_and_sound
 # import test_2_L0Xs # currently fails, due to HW issue
@@ -46,6 +42,14 @@ import test_feathereminDisp
 # import synthio_tiny_lfo_song_2
 # import synthio_tiny_lfo_song
 # import simpleRangeSynth
+
+## dumb banner code - not working!
+# import banner
+# b = banner.Banner()
+# b.test("You are a ....")
+# print("Fuk")
+# while True:
+#     pass
 
 
 print("Fell off end of main! No test to run?")
