@@ -20,7 +20,7 @@ So far, almost all components are from [Adafruit](https://www.adafruit.com). I l
    * 3 watt I2S amp
    * 1 watt STEMMA audio amplifier with speaker
    * 20 watt audio amp with external speaker
- * A TRS 1/8" headphone connector (that's stereo but so far this thing is mono)
+ * <strike>A TRS 1/8" headphone connector (that's stereo but so far this thing is mono)</strike>
  * A case, breadboard and miscellaneous other stuff to put them together.
 
 ## Software required
