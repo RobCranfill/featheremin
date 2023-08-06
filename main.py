@@ -7,10 +7,10 @@ supervisor.runtime.autoreload = False  # CirPy 8 and above
 
 # # ----------------------------------------------------
 # # This runs the main project code:
-# import feathereminMain
-# print("Feateremin test done.")
-# while True:
-#     pass
+import feathereminMain
+print("Feateremin test done.")
+while True:
+    pass
 
 
 # Other test code, found in ./test directory.

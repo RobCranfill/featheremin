@@ -14,6 +14,7 @@ import synthio
 import time
 import ulab.numpy as numpy
 
+
 SYNTH_RATE    = 22050
 SAMPLE_RATE   = 28000
 SAMPLE_SIZE   =   512
@@ -32,26 +33,23 @@ class FeatherSynth:
         TODO: Triangle wave? saw up vs saw down? (it is a rising sawtooth now.)
 
     '''
-    def __init__(self, i2s_bit_clock, i2s_word_select, i2s_data) -> None:
+    def __init__(self, stereo, i2s_bit_clock, i2s_word_select, i2s_data) -> None:
 
-        # keeping a reference here prevents the PWMAudioOut object from being garbage collected.
-
-        # OLD PWM CODE
-        # We used to pass in just one param, the pin to use for PWM.
-        # I would have kept that if Python had allowed multiple constructors, but it doesn't. :-(
-        #
-        #  self._audio = audiopwmio.PWMAudioOut(boardPinPWM)
+        if stereo:
+            self._channels = 2
+        else:
+            self._channels = 1
 
         self._audio = audiobusio.I2SOut(i2s_bit_clock, i2s_word_select, i2s_data)
 
         # As per https://github.com/todbot/circuitpython-synthio-tricks use a mixer:
-        self._mixer = audiomixer.Mixer(channel_count=1, sample_rate=SYNTH_RATE, buffer_size=BUFFER_SIZE)
+        self._mixer = audiomixer.Mixer(channel_count=self._channels, sample_rate=SYNTH_RATE, buffer_size=BUFFER_SIZE)
         self._mixer.voice[0].level = 0.1  # 10% volume to start seems plenty
 
         # TODO: if envelope not given, "the default envelope, instantly turns notes on and off"
         # which may be what we want!
         env = synthio.Envelope(attack_time=0.1, decay_time=0.05, release_time=0.2, attack_level=1.0, sustain_level=0.8)
-        self._synth = synthio.Synthesizer(sample_rate=SYNTH_RATE, envelope=env)
+        self._synth = synthio.Synthesizer(channel_count=self._channels, sample_rate=SYNTH_RATE, envelope=env)
 
         self._audio.play(self._mixer)
         self._mixer.voice[0].play(self._synth)

@@ -163,11 +163,6 @@ so we need to do some magic to make things work. See the code!
 * "RuntimeError: No pull up found on SDA or SCL; check your wiring"
   * Loose connection on StemmaQT bus (first connector in chain?)
 
-### Display contents
-| Area | Contents |
-| ---- | -------- |
-| T1   | Waveform |
-| T2   | Sleep    | 
-| T3   | LFO Mode |
-| Left | Chromatic? |
-| Right |        |
+### Demo Video
+* [On YouTube](https://youtu.be/wLTpfzRJ9J0)
+

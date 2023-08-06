@@ -6,6 +6,7 @@ import audiocore
 import board
 import busio
 import digitalio as feather_digitalio
+import gc
 import math
 import time
 import supervisor
@@ -28,6 +29,10 @@ from adafruit_seesaw import seesaw, rotaryio, digitalio, neopixel
 # Other Featheremin modules
 
 import featherSynth5 as fSynth
+
+# in work
+USE_STEREO = True
+
 
 # No 'enum' in circuitpython! :-(
 WAVEFORM_TYPES = ["Square", "Sine", "Saw"]
@@ -228,11 +233,17 @@ def init_hardware() -> tuple[adafruit_vl53l0x.VL53L0X,   # 'A' ToF sensor
         print(f"\n**** No rotary encoder at I2C {hex(ROTARY_ENCODER_I2C_ADDR)}? Can't continue!\n")
         # return
 
+    showMem()
+    print("")
+    print("init_hardware OK!")
+    print("")
 
-    print("\ninit_hardware OK!\n")
-    
+
     return L0X_A, L0X_B, apds, display, amp, encoder, wheel_button, pixel
 
+def showMem():
+    gc.collect()
+    print(f"Free memory: {gc.mem_free()}")
 
 def displayChromaticMode(disp, chromaticFlag):
     disp.setTextAreaL("Chromatic" if chromaticFlag else "Continuous")
@@ -274,6 +285,7 @@ def showFatalErrorAndHalt(errorMessage: str):
 # --------------------------------------------------
 def main():
     print("\nHello, Featheremin!\n")
+    showMem()
 
     # turn off auto-reload?
     import supervisor
@@ -308,7 +320,8 @@ def main():
     # My "synthezier" object that does the stuff that I need.
     #
     # synth = featherSynth5.FeatherSynth(AUDIO_OUT_PIN)
-    synth = fSynth.FeatherSynth(i2s_bit_clock=AUDIO_OUT_I2S_BIT, 
+    synth = fSynth.FeatherSynth(USE_STEREO,
+                                i2s_bit_clock=AUDIO_OUT_I2S_BIT, 
                                 i2s_word_select=AUDIO_OUT_I2S_WORD, 
                                 i2s_data=AUDIO_OUT_I2S_DATA)
     synth.setVolume(0.75)
@@ -339,24 +352,18 @@ def main():
     wheelButtonHeld = False
 
     neoState = False
-    # neoCount = 0
-    # NEO_THRESH = 20
     neoTime = time.monotonic_ns()
 
+    showMem()
 
     # ==== Main loop ===============================================================
     while True:
 
-        # neoCount += 1
-        # if neoCount == NEO_THRESH:
-        #     neoCount = 0
         if time.monotonic_ns() - neoTime > 10e7:
             # print(f"delta {time.monotonic_ns() - neoTime}")
             neoTime = time.monotonic_ns()
             neoState = not neoState
             wheelLED.fill(0x000100 if neoState else 0x0)
-
-        # TODO: tidy up all this gesture-handling stuff
 
         # Rotary encoder wheel.
         # negate the position to make clockwise rotation positive
@@ -380,9 +387,10 @@ def main():
         if not wheelButtonPressed:
             wheelButtonHeld = False
 
-
+        # Handle a gesture?
+        #
         changedWaveform = False
-        lfoChanged = False
+        changedLFO = False
 
         gestureValue = 0
         if gestureSensor:
@@ -403,12 +411,12 @@ def main():
             lfoIndex = lfoIndex + 1
             if lfoIndex >= len(LFO_MODES):
                 lfoIndex = 0
-            lfoChanged = True
+            changedLFO = True
         elif gestureValue == 4: # left
             lfoIndex = lfoIndex - 1
             if lfoIndex < 0:
                 lfoIndex = len(LFO_MODES)-1
-            lfoChanged = True
+            changedLFO = True
 
         if changedWaveform:
             waveName = WAVEFORM_TYPES[waveIndex]
@@ -422,7 +430,7 @@ def main():
             elif waveIndex == 2:
                 synth.setWaveformSaw()
 
-        if lfoChanged:
+        if changedLFO:
             lfoMode = LFO_MODES[lfoIndex]
             print(f" -> LFO #{lfoIndex}: {lfoMode}")
             displayLFOMode(display, lfoMode)

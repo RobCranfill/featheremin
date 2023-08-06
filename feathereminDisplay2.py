@@ -11,9 +11,11 @@
 import board
 import terminalio
 import displayio
+import gc
 import random
 import time
 import sys
+
 from adafruit_display_text import label
 from adafruit_bitmap_font import bitmap_font
 import adafruit_ili9341
@@ -21,12 +23,13 @@ import adafruit_imageload
 from digitalio import DigitalInOut, Direction
 from adafruit_vl53l0x import VL53L0X
 
+
 MESSAGE_TEXT_COLOR = 0xFF0000
 STATUS_TEXT_COLOR  = 0X000000
 
-FONT_TO_LOAD        = "./SFDigitalReadout-Medium-24.bdf"
-BACKGROUND_BITMAP   = "./background.bmp"
-SPRITE_BITMAP       = "./led_sprite_sheet.bmp"
+FONT_TO_LOAD        = "fonts/SFDigitalReadout-Medium-24.bdf"
+BACKGROUND_BITMAP   = "images/background.bmp"
+SPRITE_BITMAP       = "images/led_sprite_sheet.bmp"
 
 
 '''
@@ -35,7 +38,14 @@ SPRITE_BITMAP       = "./led_sprite_sheet.bmp"
 '''
 class FeathereminDisplay:
 
-    def __init__(self, p_rotation, p_show_background, boardPinCS, boardPinDC, boardPinReset) -> None:
+    def __init__(self, p_rotation, boardPinCS, boardPinDC, boardPinReset) -> None:
+
+        gc.collect()
+        start_mem = gc.mem_free()
+        print(f"Start free mem: {start_mem}")
+        
+        # set this to false to get it to run, for debugging
+        show_background = True
 
         self.init_OK = False
         self.text_area_1_ = None
@@ -50,19 +60,19 @@ class FeathereminDisplay:
             display_bus = displayio.FourWire(spi, command=boardPinDC, chip_select=boardPinCS, reset=boardPinReset)
             display = adafruit_ili9341.ILI9341(display_bus, width=320, height=240, rotation=p_rotation)
         except:
-            print("No ILI9341 display found?")
+            print("**** No ILI9341 display found?")
             # TODO: what to do if construction fails?
             return
 
         bitmap, palette = None, None
-        if p_show_background:
+        if show_background:
             try:
                 bitmap, palette = adafruit_imageload.load(BACKGROUND_BITMAP, bitmap=displayio.Bitmap, palette=displayio.Palette)
 
                 # FIXME: why do I have to set this here? isn't this global, so to speak?
-                MESSAGE_TEXT_COLOR = 0xFF0000 # red
+                # MESSAGE_TEXT_COLOR = 0xFF0000 # red
             except:
-                print("Can't load background bitmap?")
+                print("**** Can't load background bitmap?")
                 # TODO: what to do if construction fails?
                 return
         else:
@@ -135,6 +145,14 @@ class FeathereminDisplay:
         background_group.append(led_group)
 
         self.init_OK = True
+
+        gc.collect()
+        now_mem = gc.mem_free()
+        used_mem = start_mem - now_mem
+        print(f" Now free mem: {now_mem}")
+        print(f"Used mem: {used_mem}")
+        
+
 
     # end __init__
 
