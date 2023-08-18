@@ -167,13 +167,7 @@ def init_hardware() -> tuple[adafruit_vl53l0x.VL53L0X,   # 'A' ToF sensor
     L0X_A = None
     try:
         L0X_A = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
-
         # Set params for the sensor?
-        # # The default timing budget is 33ms, a good compromise of speed and accuracy.
-        # # For example a higher speed but less accurate timing budget of 20ms:
-        # L0X_A.measurement_timing_budget = 20000
-        # # Or a slower but more accurate timing budget of 200ms:
-        # L0X_A.measurement_timing_budget = 200000
 
         print("'Primary' VL53L0X init OK")
     except:
@@ -482,7 +476,7 @@ def main():
                 if lfoIndex == 1: # tremolo
                      # map to 8-16?
                     trem = map_and_scale(r2, 50, 500, 8, 16)
-                    print(f"r2 {r2} -> trem {trem}")
+                    # print(f"r2 {r2} -> trem {trem}")
                     displayLFOMode(display, f"Tremolo @ {trem:.1f}")
                     synth.setTremolo(trem)
 
@@ -490,7 +484,7 @@ def main():
                     # map to 4-10?
                     vib = map_and_scale(r2, 50, 500, 4, 10)
                     synth.setVibrato(r2a) 
-                    print(f"r2 {r2} -> vib ?")
+                    # print(f"r2 {r2} -> vib ?")
                     displayLFOMode(display, f"Vibrato @ {vib:.1f}")
 
             # drone mode

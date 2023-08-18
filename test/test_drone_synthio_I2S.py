@@ -39,7 +39,7 @@ _audio = audiobusio.I2SOut(i2s_bit_clock, i2s_word_select, i2s_data)
 
 # As per https://github.com/todbot/circuitpython-synthio-tricks use a mixer:
 _mixer = audiomixer.Mixer(channel_count=1, sample_rate=SYNTH_RATE, buffer_size=BUFFER_SIZE)
-_mixer.voice[0].level = 0.1  # 10% volume to start seems plenty
+_mixer.voice[0].level = 0.5  # 50% volume to start seems plenty
 
 # TODO: if envelope not given, 
 # "the default envelope, instantly turns notes on and off" 

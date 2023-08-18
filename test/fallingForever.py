@@ -1,7 +1,4 @@
-
-# mods by cran for I2S audio
-#
-# falling_forever_code.py -- you're falling... falling...
+# falling_forever_i2s_code.py -- you're falling... falling...
 # 26 Jul 2023 - @todbot / Tod Kurt
 #
 # Demonstrate using wavetables to make interesting sounds.
@@ -17,33 +14,38 @@
 # External libraries needed:
 # - adafruit_wave  - circup install adafruit_wave
 #
-# Pins used:
-# - see below
+# Pins used on Raspberry Pi Pico:
+# - GP9 - I2S BCK
+# - GP10 - I2S LRCK
+# - GP11 - IS2 DIN
+#
+# For a PWM version of this using QTPy RP2040 and PWM audio, see code.py
 #
 
-import audiobusio
-import audiomixer
-
-import board, time, audiopwmio, synthio
+import board, time, audiobusio, synthio
 import ulab.numpy as np
 import adafruit_wave
 
-# cran: was
-# audio = audiopwmio.PWMAudioOut(board.SCK)
-
-audio = audiobusio.I2SOut(bit_clock=board.D9, word_select=board.D10, data=board.D11)
+import audiomixer # cran
 
 
-# synth = synthio.Synthesizer(sample_rate = 28*1024)  # 28 * 1024? why yes!
-# audio.play(synth)
+i2s_bclk, i2s_wsel, i2s_data = board.D9, board.D10, board.D11
+audio = audiobusio. I2SOut(bit_clock=i2s_bclk, word_select=i2s_wsel, data=i2s_data)
 
+# start code by todbot
+synth = synthio.Synthesizer(sample_rate=28672)  # 28 * 1024
+audio.play(synth)
+print("todbot's code....")
+# end code by todbot
 
-mixer = audiomixer.Mixer(sample_rate=28000, channel_count=1, buffer_size=4096)
-synth = synthio.Synthesizer(sample_rate=28000, channel_count=1)
-audio.play(mixer)
-mixer.voice[0].play(synth)
-mixer.voice[0].level = 0.75  # cut the loudness a bit
-
+# # start code by cran
+# synth = synthio.Synthesizer(sample_rate=28672, channel_count=1)
+# mixer = audiomixer.Mixer(sample_rate=28672, channel_count=1, buffer_size=4096)
+# audio.play(mixer)
+# mixer.voice[0].play(synth)
+# mixer.voice[0].level = 0.75  # cut the loudness a bit
+# print("cran's code....")
+# # end code by cran
 
 # mix between values a and b, works with numpy arrays too,  t ranges 0-1
 def lerp(a, b, t):  return (1-t)*a + t*b
@@ -57,6 +59,8 @@ class Wavetable:
             raise ValueError("unsupported WAV format")
         self.waveform = np.zeros(wave_len, dtype=np.int16)  # empty buffer we'll copy into
         self.num_waves = self.w.getnframes() // self.wave_len
+        self.set_wave_pos(0)  # set initial position
+        print("self.set_wave_pos(0)  # set initial position")
 
     def set_wave_pos(self, pos):
         """Pick where in wavetable to be, morphing between waves"""
@@ -70,12 +74,8 @@ class Wavetable:
         self.waveform[:] = lerp(waveA, waveB, pos_frac) # mix waveforms A & B
 
 
-# try:
 wavetable1 = Wavetable("wav/BRAIDS02.WAV") # from http://waveeditonline.com/index-17.html
 wavetable2 = Wavetable("wav/HARMONIO.WAV") # from http://waveeditonline.com/index.html
-# except:
-#     print("arg!")
-
 
 lfo_wave_uz = np.array( (32767, 0), dtype=np.int16)  # start at max go to zero
 lfo_wave_dz = np.array( (-32767, 0), dtype=np.int16) # start at min go to zero
@@ -90,9 +90,9 @@ synth.press( (note1,note2) )
 i = 0  # current wave in wavetable
 di = 0.07  # how fast to scan through wavetable, fractional means we morph
 while True:
-    # print(f"{i}...")
     i = i + di
     if i <=0 or i >= wavetable1.num_waves: di = -di  # bounce!
+    # print(f"i = {i}")
     wavetable1.set_wave_pos(i)
     wavetable2.set_wave_pos(i/3) # moves 1/3 as much
     time.sleep(0.001)
@@ -100,4 +100,4 @@ while True:
     if plfo1.phase > 0.99:
         plfo1.retrigger()  # retrigger LFOs to start bends again
         plfo2.retrigger()  # (we do this because synthio.LFO interpolates end->start too
-
+        

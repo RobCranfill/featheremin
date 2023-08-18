@@ -6,9 +6,11 @@ import board, time, audiopwmio, synthio, random
 import ulab.numpy as np
 import audiobusio, audiomixer
 
-audio = audiobusio.I2SOut(bit_clock=board.D9, word_select=board.D10, data=board.D11)
+print("derping....")
+
 #audio = audiopwmio.PWMAudioOut(board.GP10)
 #synth = synthio.Synthesizer(sample_rate=22050)
+audio = audiobusio.I2SOut(bit_clock=board.D9, word_select=board.D10, data=board.D11)
 
 mixer = audiomixer.Mixer(sample_rate=28000, channel_count=2, buffer_size=4096)
 synth = synthio.Synthesizer(sample_rate=28000, channel_count=2)
@@ -48,12 +50,20 @@ my_wave = wave_saw
 note_start = 45  # A2
 notes_deepnote = ( 26, 38, 50, 57,  62, 69, 74, 81,
                    62, 69, 74, 81,  86, 86, 90, 90 );
+
+
 # Deep Note lifecycle
 stage1_time = 3  # static random chaos
 stage2_time = 3  # moving random chaos
 stage3_time = 8  # converge on big chord
 stage4_time = 5  # hold on big chord
 time_steps = 100 # iterations per stage
+
+# cran - speed it up!
+for s in (stage1_time, stage2_time, stage3_time, stage4_time):
+    s = s / 4
+stage4_time = stage4_time / 2 # even faster
+
 
 num_oscs = 6
 
@@ -106,7 +116,7 @@ for t in range(time_steps):
 time.sleep(stage4_time)
 synth.release_all()
 
+print("derped!")
 while True:
-    # print("done")
     # time.sleep(1)
     pass
