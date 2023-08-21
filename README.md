@@ -1,4 +1,4 @@
-# featheremin
+# featheramin
 A microcontroller-based theremin using CircuitPython and two LiDAR range detectors. 
 
 This project uses the new, amazing, and very cool "synthio" package. 
@@ -16,15 +16,16 @@ So far, almost all components are from [Adafruit](https://www.adafruit.com). I l
  * 2.2" TFT display
  * I'm still trying to figure out how to amplify this. I've used:
    * Generic/clone [Amazon](https://a.co/d/77fnhnu) PCM5102 I2S line out breakout board (current solution)
-     * Currently I am running this line out into a pair of small desktop speakers (Creative Pebble), which works well.
+     * Currently I am running this line out into a pair of small desktop speakers (Creative Pebble), which works really well.
    * 3 watt I2S amp
    * 1 watt STEMMA audio amplifier with speaker
    * 20 watt audio amp with external speaker
- * <strike>A TRS 1/8" headphone connector (that's stereo but so far this thing is mono)</strike>
+ * A TRS 1/8" headphone connector
+ * A rotary encoder, but I'm starting to think that's too much
  * A case, breadboard and miscellaneous other stuff to put them together.
 
 ## Software required
- * Latest Adafruit CircuitPython: 8.2.2 (8.2.x required for new 'synthio' stuff)
+ * Latest Adafruit CircuitPython: 8.2.3 (8.2.x required for new 'synthio' stuff)
  * The following Adafruit support libraries; use 'circup' to install? The following is the output from the circup 'freeze' command at one particular point in time; you may as well use the latest-and-greatest.
 ```
 circup freeze
@@ -41,8 +42,6 @@ adafruit_bitmap_font==2.0.1
 adafruit_display_text==3.0.0
 ```
 
-
-
 ## Dev environment
 I have been using Visual Studio Code for my IDE but I don't think that matters. I have the CircuitPython extension installed, which is nice, but it is only somewhat functional as I also have my VS Code running in WSL2, which breaks some things. YMMV.
 
@@ -56,7 +55,6 @@ must be last in the chain because it has no StemmaQT connector and is attached v
 The ILI9341 display is wired to the Feather's hardware SPI interface via 6 wires (plus ground and 3.3v).
 
 One of the VL53L0X's XSHUT pin is connected to a GPIO output pin so we can re-assign its I2C address.
-
 
 ## Functionality
  * Sensors:
@@ -77,7 +75,7 @@ One of the VL53L0X's XSHUT pin is connected to a GPIO output pin so we can re-as
        * Pseudo alphanumeric LED area for text
        * Pseudo single LEDs for status (chromatic, etc)
        * TODO: Bar graphs? Meters?!
-       
+
 
 ## Things to do (some of which are done - or abandoned):
  * 3 modes? diatonic, chromatic, continuous
