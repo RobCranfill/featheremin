@@ -1,4 +1,4 @@
-# featheramin
+# featheremin
 A microcontroller-based theremin using CircuitPython and two LiDAR range detectors. 
 
 This project uses the new, amazing, and very cool "synthio" package. 
