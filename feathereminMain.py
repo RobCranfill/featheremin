@@ -290,26 +290,28 @@ def main():
     # Just plain None back is super bad.
     #
     hw_result = init_hardware()
-    if hw_result is tuple():
+    if hw_result is tuple(): # FIXME: doesn't work right
         showFatalErrorAndHalt("init_hardware failed!")
 
     tof_A, tof_B, gestureSensor, display, amp, wheel, wheelButton, wheelLED = hw_result
     
     # What missing hardware can we tolerate?
-
+    #####
     # Check only for the two really, really required things?
     # if tof_A is None or display is None:
-
+    #
     # Check for anything missing?
     # if None in (tof_A, tof_B, gestureSensor, display, amp, wheel, wheelButton, wheelLED):
-
+    #
     # No MAX9744 amp is always OK
-    if None in (tof_A, tof_B, gestureSensor, display, wheel, wheelButton, wheelLED):
+    # if None in (tof_A, tof_B, gestureSensor, display, wheel, wheelButton, wheelLED):
 
-        print("\n AUGHHHHHHH !!!!!\n\n")
+    if None in (tof_A, tof_B, gestureSensor, display):
+
+        print("")
         print("Necessary hardware not found.\n")
         print(f"ToF A: {tof_A}\nToF B: {tof_B}\nGest: {gestureSensor}\nDisp: {display}")
-        print(f"Amp: {amp}\nWheel: {wheel}\nButt: {wheelButton}\nLED: {wheelLED}")
+        print(f"(Amp: {amp}\nWheel: {wheel}\nButt: {wheelButton}\nLED: {wheelLED})")
         return
 
     # My "synthezier" object that does the stuff that I need.
@@ -358,29 +360,31 @@ def main():
             # print(f"delta {time.monotonic_ns() - neoTime}")
             neoTime = time.monotonic_ns()
             neoState = not neoState
-            wheelLED.fill(0x000100 if neoState else 0x0)
+            if wheelLED:
+                wheelLED.fill(0x000100 if neoState else 0x0)
 
         # Rotary encoder wheel.
         # negate the position to make clockwise rotation positive
-        position = -wheel.position
-        if position != wheelPositionLast:
-            wheelPositionLast = position
+        if wheel:
+            position = -wheel.position
+            if position != wheelPositionLast:
+                wheelPositionLast = position
 
-            # FIDME: even tho we limit the value we *use*, 
-            # the hidden 'position' goes way out of bounds which works oddly. Fix!
-            dSleepMilliseconds = clamp(position, 0, 100)
+                # FIDME: even tho we limit the value we *use*, 
+                # the hidden 'position' goes way out of bounds which works oddly. Fix!
+                dSleepMilliseconds = clamp(position, 0, 100)
 
-            # print(f"Wheel {position} - > d = {dSleepMilliseconds}")
-            displayDelay(display, dSleepMilliseconds)
+                # print(f"Wheel {position} - > d = {dSleepMilliseconds}")
+                displayDelay(display, dSleepMilliseconds)
 
-        wheelButtonPressed = not wheelButton.value
-        if wheelButtonPressed and not wheelButtonHeld:
-            chromatic = not chromatic
-            displayChromaticMode(display, chromatic)
-            print(f"chromatic: {chromatic}")
-            wheelButtonHeld = True
-        if not wheelButtonPressed:
-            wheelButtonHeld = False
+            wheelButtonPressed = not wheelButton.value
+            if wheelButtonPressed and not wheelButtonHeld:
+                chromatic = not chromatic
+                displayChromaticMode(display, chromatic)
+                print(f"chromatic: {chromatic}")
+                wheelButtonHeld = True
+            if not wheelButtonPressed:
+                wheelButtonHeld = False
 
         # Handle a gesture?
         #
