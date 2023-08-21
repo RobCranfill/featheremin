@@ -24,13 +24,6 @@ from digitalio import DigitalInOut, Direction
 from adafruit_vl53l0x import VL53L0X
 
 
-MESSAGE_TEXT_COLOR = 0xFF0000
-STATUS_TEXT_COLOR  = 0X000000
-
-FONT_TO_LOAD        = "fonts/SFDigitalReadout-Medium-24.bdf"
-BACKGROUND_BITMAP   = "images/background.bmp"
-SPRITE_BITMAP       = "images/led_sprite_sheet.bmp"
-
 
 '''
     The display object.
@@ -38,14 +31,21 @@ SPRITE_BITMAP       = "images/led_sprite_sheet.bmp"
 '''
 class FeathereminDisplay:
 
-    def __init__(self, p_rotation, boardPinCS, boardPinDC, boardPinReset) -> None:
+    MESSAGE_TEXT_COLOR = 0xFF0000
+    STATUS_TEXT_COLOR  = 0X000000
+
+    FONT_TO_LOAD        = "fonts/SFDigitalReadout-Medium-24.bdf"
+    BACKGROUND_BITMAP   = "images/background.bmp"
+    SPRITE_BITMAP       = "images/led_sprite_sheet.bmp"
+
+    def __init__(self, p_rotation, boardPinCS, boardPinDC, boardPinReset, loadBackground) -> None:
 
         gc.collect()
         start_mem = gc.mem_free()
-        print(f"Start free mem: {start_mem}")
+        print(f"FeathereminDisplay: start free mem: {start_mem}")
         
         # set this to false to get it to run, for debugging
-        show_background = True
+        show_background = loadBackground
 
         self.init_OK = False
         self.text_area_1_ = None
@@ -60,26 +60,27 @@ class FeathereminDisplay:
             display_bus = displayio.FourWire(spi, command=boardPinDC, chip_select=boardPinCS, reset=boardPinReset)
             display = adafruit_ili9341.ILI9341(display_bus, width=320, height=240, rotation=p_rotation)
         except:
-            print("**** No ILI9341 display found?")
+            print("**** FeathereminDisplay: No ILI9341 display found?")
             # TODO: what to do if construction fails?
             return
 
         bitmap, palette = None, None
         if show_background:
             try:
-                bitmap, palette = adafruit_imageload.load(BACKGROUND_BITMAP, bitmap=displayio.Bitmap, palette=displayio.Palette)
+                bitmap, palette = adafruit_imageload.load(
+                    FeathereminDisplay.BACKGROUND_BITMAP, bitmap=displayio.Bitmap, palette=displayio.Palette)
 
                 # FIXME: why do I have to set this here? isn't this global, so to speak?
-                # MESSAGE_TEXT_COLOR = 0xFF0000 # red
+                # self.MESSAGE_TEXT_COLOR = 0xFF0000 # red
             except:
-                print("**** Can't load background bitmap?")
+                print("**** FeathereminDisplay: Can't load background bitmap?")
                 # TODO: what to do if construction fails?
                 return
         else:
             bitmap = displayio.Bitmap(320, 240, 1)
             palette = displayio.Palette(1)
             palette[0] = 0x0000FF  # blue
-            MESSAGE_TEXT_COLOR = 0x000000 # black
+            self.MESSAGE_TEXT_COLOR = 0x000000 # black
 
         tile_grid = displayio.TileGrid(bitmap, pixel_shader=palette)    # Create a TileGrid to hold the bitmap
         background_group = displayio.Group()                            # Create a Group to hold the TileGrid
@@ -90,10 +91,10 @@ class FeathereminDisplay:
         font = None
         fontScale = 2
         try:
-            font = bitmap_font.load_font(FONT_TO_LOAD)
+            font = bitmap_font.load_font(FeathereminDisplay.FONT_TO_LOAD)
             fontScale = 1
         except:
-            print("Can't load custom font!")
+            print("FeathereminDisplay:Can't load custom font!")
             font = terminalio.FONT
 
 
@@ -103,25 +104,25 @@ class FeathereminDisplay:
         #
         text_group = displayio.Group(scale=fontScale, x=0, y=72)
 
-        self.text_area_1_ = label.Label(font, text="", color=MESSAGE_TEXT_COLOR, x=20, y=4)
+        self.text_area_1_ = label.Label(font, text="1", color=FeathereminDisplay.MESSAGE_TEXT_COLOR, x=20, y=4)
         text_group.append(self.text_area_1_)  # Subgroup for text scaling
 
-        self.text_area_2_ = label.Label(font, text="", color=MESSAGE_TEXT_COLOR, x=20, y=50)
+        self.text_area_2_ = label.Label(font, text="2", color=FeathereminDisplay.MESSAGE_TEXT_COLOR, x=20, y=50)
         text_group.append(self.text_area_2_)
 
-        self.text_area_3_ = label.Label(font, text="", color=MESSAGE_TEXT_COLOR, x=20, y=100)
+        self.text_area_3_ = label.Label(font, text="3", color=FeathereminDisplay.MESSAGE_TEXT_COLOR, x=20, y=100)
         text_group.append(self.text_area_3_)
 
-        self.text_area_l_ = label.Label(font, text="", color=STATUS_TEXT_COLOR, x=6, y=666)
+        self.text_area_l_ = label.Label(font, text="4", color=FeathereminDisplay.STATUS_TEXT_COLOR, x=6, y=666)
         text_group.append(self.text_area_l_)
 
-        self.text_area_r_ = label.Label(font, text="", color=STATUS_TEXT_COLOR, x=66, y=666)
+        self.text_area_r_ = label.Label(font, text="5", color=FeathereminDisplay.STATUS_TEXT_COLOR, x=66, y=666)
         text_group.append(self.text_area_r_)
 
         background_group.append(text_group)
 
         # Load the sprite sheet bitmap
-        sprite_sheet, led_palette = adafruit_imageload.load(SPRITE_BITMAP,
+        sprite_sheet, led_palette = adafruit_imageload.load(FeathereminDisplay.SPRITE_BITMAP,
                                                             bitmap=displayio.Bitmap,
                                                             palette=displayio.Palette)
         
@@ -149,12 +150,12 @@ class FeathereminDisplay:
         gc.collect()
         now_mem = gc.mem_free()
         used_mem = start_mem - now_mem
-        print(f" Now free mem: {now_mem}")
-        print(f"Used mem: {used_mem}")
+        print("--------------------------------")
+        print(f"FeathereminDisplay: Now free mem: {now_mem:8}")
+        print(f"FeathereminDisplay:     Used mem: {used_mem:8}")
         
-
-
     # end __init__
+
 
     # Make the LED red? the lit, red led is first in the sprite sheet, so index 0
     def setLEDStatus(self, status: bool):
@@ -163,19 +164,19 @@ class FeathereminDisplay:
     # "setters" for the text areas
     #
     def setTextArea1(self, pText):
-        self.text_area_1_.text = pText
+        self.text_area_1_._update_text(pText)
 
     def setTextArea2(self, pText):
-        self.text_area_2_.text = pText
+        self.text_area_2_._update_text(pText)
 
     def setTextArea3(self, pText):
-        self.text_area_3_.text = pText
+        self.text_area_3_._update_text(pText)
 
     def setTextAreaL(self, pText):
-        self.text_area_l_.text = pText
+        self.text_area_l_._update_text(pText)
 
     def setTextAreaR(self, pText):
-        self.text_area_r_.text = pText
+        self.text_area_r_._update_text(pText)
 
     '''
     This does not return!

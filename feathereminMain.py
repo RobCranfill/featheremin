@@ -290,8 +290,9 @@ def main():
     # Just plain None back is super bad.
     #
     hw_result = init_hardware()
-    if hw_result is None:
+    if hw_result is tuple():
         showFatalErrorAndHalt("init_hardware failed!")
+
     tof_A, tof_B, gestureSensor, display, amp, wheel, wheelButton, wheelLED = hw_result
     
     # What missing hardware can we tolerate?
