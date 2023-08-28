@@ -2,6 +2,7 @@
 Being a list to keep instead of using GitHub ?
 
 ## Features
+* New gestures, to get rid of rotary encoder!
 * Stereo!
   * Using PCM5201 thingy
 
