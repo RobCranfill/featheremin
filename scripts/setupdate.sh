@@ -3,6 +3,6 @@
 # This is for native Ubuntu (not WSL)
 function cpupdate() {
 	CPATH=/media/rob/CIRCUITPY
-	cp -uv $CPATH/feathereminMain.py $CPATH/feathereminDisplay1.py /$CPATH/feathereminDisplay2.py $CPATH/featherSynth5.py $CPATH/README.md .
+	cp -uv $CPATH/feathereminMain.py $CPATH/feathereminDisplay?.py $CPATH/featherSynth?.py $CPATH/README.md gestureMenu.py .
 	cp -uv $CPATH/test/* ./test
 }

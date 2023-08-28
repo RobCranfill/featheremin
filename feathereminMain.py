@@ -453,8 +453,6 @@ def main():
 
 
         # Get the two ranges, as available. 
-        # (FIXME: Why is one always available, but the other is not? Different hardware.)
-        # TODO: if not in a mode that uses this range, don't read it?
         #
         # r1 is the main ToF detector, used for main frequency.
         # r2 is the secondary ToF, used for LFO freq, and maybe other things.
@@ -462,14 +460,14 @@ def main():
         r1 = tof_A.range
         # print(f"Range A: {r1}, range B: {r2}")
 
+        # Only read ToF2 if ToF1 is close - TODO: how close?
+        # TODO: if not in a mode that uses this ToF2, don't read it?
         if r1 > 0 and r1 < 1000:
 
-            # (only read tof 2 if 1 is close)
-            #
-            r2 = tof_B.range    
+            r2 = tof_B.range
             if r2 > 50 and r2 < 500:
                 # TODO: REWORK THIS
-                # - We do get readings farther out, to like XXXX at 2 feet, but will use the closer range.
+                # - We do get readings farther out, to like XXXX at 2 feet, but will use only the closer range?
                 # TODO: Use values XXXX for now; tailor for trem/vib?
                 # sometimes there seem to be false signals of 0, so toss them out.
                 r2a = max(5, r2)
