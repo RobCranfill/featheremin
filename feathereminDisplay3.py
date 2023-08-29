@@ -8,8 +8,8 @@
 
     The GPIO pins to use are passed in on object creation.
 
-    Version 3: for new gesture menu scheme
-
+    Version 3: for new gesture menu scheme. Variable number of display areas?
+        TODO: a way to highlight selected item.
 """
 import board
 import terminalio
@@ -25,25 +25,17 @@ from adafruit_vl53l0x import VL53L0X
 # Implements the FeathereminDisplay class:
 class FeathereminDisplay:
 
-    def __init__(self, p_rotation, boardPinCS, boardPinDC, boardPinReset) -> None:
+    def __init__(self, p_rotation, boardPinCS, boardPinDC, boardPinReset, nTextAreas) -> None:
 
-        self.text_area_1_ = None
-        self.text_area_2_ = None
-        self.text_area_3_ = None
+        self._textAreas = []
+        self._nTextAreas = nTextAreas
 
         # Release any resources currently in use for the displays
         displayio.release_displays()
 
         spi = board.SPI()
-
-        # tft_cs = board.A2
-        # tft_dc = board.A0
-        # tft_reset = board.A1
-
-        tft_cs, tft_dc, tft_reset = boardPinCS, boardPinDC, boardPinReset
-
         try:
-            display_bus = displayio.FourWire(spi, command=tft_dc, chip_select=tft_cs, reset=tft_reset)
+            display_bus = displayio.FourWire(spi, command=boardPinDC, chip_select=boardPinCS, reset=boardPinReset)
             display = adafruit_ili9341.ILI9341(display_bus, width=320, height=240, rotation=p_rotation)
         except:
             print("No ILI9341 display found?")
@@ -82,15 +74,18 @@ class FeathereminDisplay:
 
         activeColor = 0xFFFFFF
         inactiveColor = 0x808080
+        
+        lx = 5
+        ly = 0
+        yInc = 10
 
-        self.text_area_1_ = label.Label(terminalio.FONT, text="text_area_1_", color=inactiveColor, x=5, y=0)
-        text_group.append(self.text_area_1_)  # Subgroup for text scaling
+        print(f"Display creating {nTextAreas} text areas")
+        for i in range(nTextAreas):
 
-        self.text_area_2_ = label.Label(terminalio.FONT, text="text_area_2_", color=activeColor, x=5, y=10)
-        text_group.append(self.text_area_2_)  # Subgroup for text scaling
-
-        self.text_area_3_ = label.Label(terminalio.FONT, text="text_area_3_", color=inactiveColor, x=5, y=20)
-        text_group.append(self.text_area_3_)  # Subgroup for text scaling
+            ta = label.Label(terminalio.FONT, text=f"_textAreas[{i}]", color=inactiveColor, x=lx, y=ly)
+            text_group.append(ta)  # Subgroup for text scaling
+            self._textAreas.append(ta)
+            ly += yInc
 
         self.text_area_l_ = label.Label(terminalio.FONT, text="Control L", color=0x000000, x=10, y=60)
         text_group.append(self.text_area_l_)  # Subgroup for text scaling
@@ -103,15 +98,21 @@ class FeathereminDisplay:
     # end __init__
 
     # "setters" for the text areas
-    #
+    # FIXME
+    def getTextAreas(self):
+        return self._textAreas
+    
+    def setTextAreaN(self, n, pText):
+        self._textAreas[n].text = pText
+
     def setTextArea1(self, pText):
-        self.text_area_1_.text = pText
+        self._textAreas[0].text = pText
 
     def setTextArea2(self, pText):
-        self.text_area_2_.text = pText
+        self._textAreas[1].text = pText
 
     def setTextArea3(self, pText):
-        self.text_area_3_.text = pText
+        self._textAreas[2].text = pText
 
     def setTextAreaL(self, pText):
         self.text_area_l_.text = pText

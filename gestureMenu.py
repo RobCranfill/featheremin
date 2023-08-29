@@ -106,17 +106,16 @@ class MenuHandler():
 # end class MenuHandler
 
 
-# we want:
-# if   gestureValue == 1: # down
-# elif gestureValue == 2: # up
-# elif gestureValue == 3: # right
-# elif gestureValue == 4: # left
-
 class GestureMenu:
+    '''
+    Display a menu and update it based on gestures from a APDS9960.
+
+    '''
     def __init__(self, display, menuData, windowSize=3):
 
         self._display = display
         self._windowSize = windowSize
+        print(f"GestureMenu: widows size {windowSize}")
 
         i2c = None
         try:
@@ -157,14 +156,11 @@ class GestureMenu:
         for k in allKeys:
             keyList.append(k)
         
-        kLoc = keyList.index(self.getSelectedItem(), 1)
-        displayKeys = keyList[kLoc-1:kLoc+2]
-
-        # TODO: the display object needs to have an iterable list of text areas
-
-        self._display.setTextArea1(f"{displayKeys[0]} = {self.getItemOption(displayKeys[0])}")
-        self._display.setTextArea2(f"{displayKeys[1]} = {self.getItemOption(displayKeys[1])}")
-        self._display.setTextArea3(f"{displayKeys[2]} = {self.getItemOption(displayKeys[2])}")
+        startLookingAt = 1 # not quite right?
+        kLoc = keyList.index(self.getSelectedItem(), startLookingAt)
+        displayKeys = keyList[kLoc-1:kLoc+self._windowSize-1]
+        for i in range(self._windowSize):
+            self._display.setTextAreaN(i, f"{displayKeys[i]} = {self.getItemOption(displayKeys[i])}")
 
 
     def getItemAndOption(self):
