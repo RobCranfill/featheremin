@@ -117,28 +117,21 @@ class GestureMenu:
     Display a menu and update it based on gestures from a APDS9960.
 
     '''
-    def __init__(self, display, menuData, windowSize=3):
+    def __init__(self, gestureSensor, display, menuData, windowSize=3):
 
+        self._apds = gestureSensor
         self._display = display
         self._windowSize = windowSize
 
-        i2c = None
+        # FIXME: the calling code should do this?
         try:
-            i2c = board.STEMMA_I2C()
-        except:
-            print("board.STEMMA_I2C failed! Is the Stemma bus connected? It would seem not.")
-
-        # ----------------- APDS9960 gesture/proximity/color sensor
-        # self._apds = None
-        try:
-            self._apds = APDS9960(i2c)
-            self._apds.enable_proximity = True
             self._apds.enable_gesture = True
+            self._apds.enable_proximity = True # must be True even for use only as gesture sensor
             self._apds.rotation = 0 # this is correct for my upside-down test setup at OS; was 90 (?!)
-            print("APDS9960 init OK")
+            # print("APDS9960 init OK")
         except:
-            print("**** No APDS9960? Continuing....")
-        
+            print("**** No APDS9960 gesture sensor? Continuing....")
+
         self._menuHandler = MenuHandler(menuData)
         self.updateDisplay()
 

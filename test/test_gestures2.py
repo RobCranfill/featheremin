@@ -21,7 +21,21 @@ menu = [ # 'item', 'options', *index* of default
     ["Item 5",   ["I5 opt 1", "I5 opt 2"], 0],
     ]
 
-gm = gestureMenu.GestureMenu(display, menu, windowSize=4)
+
+i2c = None
+try:
+    i2c = board.STEMMA_I2C()
+except:
+    print("board.STEMMA_I2C failed! Is the Stemma bus connected? It would seem not.")
+
+# ----------------- APDS9960 gesture/proximity/color sensor
+apds = None
+try:
+    apds = APDS9960(i2c)
+except:
+    print("Can't init APDS9960?")
+
+gm = gestureMenu.GestureMenu(apds, display, menu, windowSize=4)
 
 i = 0 # this shows that we can keep processing after looking for selections
 while True:
