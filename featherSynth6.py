@@ -31,10 +31,10 @@ class FeatherSynth:
     '''
         Our new synthio-based synth.
 
-        Can change waveform, TODO: envelope, and add tremolo or vibrato.
+        TODO: FIXME: To change the pitch of a note, we create a new Note. That's probably unnecessary.
 
+        TODO: change note envelope?
         TODO: Triangle wave? saw up vs saw down? (it is a rising sawtooth now.)
-
     '''
     def __init__(self, stereo, i2s_bit_clock, i2s_word_select, i2s_data) -> None:
 

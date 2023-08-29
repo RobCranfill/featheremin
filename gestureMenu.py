@@ -1,5 +1,11 @@
 '''
     Class GestureMenu (& ancillary classes)
+
+    TODO:
+        - implement range options
+        - be able to pre-select an option other than the first
+            (this is perhaps less important for normal items; moreso for range items such as volume)
+
 '''
 import board
 from adafruit_apds9960.apds9960 import APDS9960
@@ -51,8 +57,8 @@ class MenuHandler():
         # (not ones that only changed the sected item)
         self._optionChanged = False
 
-        print(f"Dictionary: {self._stateDict}\n")
-        print(f"Items: {self._itemList}")
+        # print(f"Dictionary: {self._stateDict}\n")
+        # print(f"Items: {self._itemList}")
 
 
     def getItems(self):
@@ -115,7 +121,6 @@ class GestureMenu:
 
         self._display = display
         self._windowSize = windowSize
-        print(f"GestureMenu: widows size {windowSize}")
 
         i2c = None
         try:
@@ -213,9 +218,7 @@ class GestureMenu:
 
 
     def test(self):
-
         print("Test/demo GestureMenu!")
-
         i = 0
         while True:
             i += 1

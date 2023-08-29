@@ -8,8 +8,8 @@
 
     The GPIO pins to use are passed in on object creation.
 
-    Version 3: for new gesture menu scheme. Variable number of display areas?
-        TODO: a way to highlight selected item.
+    Version 3: for new gesture menu scheme. Variable number of display areas.
+        TODO: a more general way to indicated selected item.
 """
 import board
 import terminalio
@@ -22,10 +22,13 @@ import sys
 from digitalio import DigitalInOut, Direction
 from adafruit_vl53l0x import VL53L0X
 
-# Implements the FeathereminDisplay class:
 class FeathereminDisplay:
+    '''Implements the FeathereminDisplay class.
+    
+    New version supporting an arbitrary number of text areas (only tested up to 4, so far.)
+    '''
 
-    def __init__(self, p_rotation, boardPinCS, boardPinDC, boardPinReset, nTextAreas) -> None:
+    def __init__(self, p_rotation, boardPinCS, boardPinDC, boardPinReset, nTextAreas=3) -> None:
 
         self._textAreas = []
         self._nTextAreas = nTextAreas
@@ -79,19 +82,22 @@ class FeathereminDisplay:
         ly = 0
         yInc = 10
 
-        print(f"Display creating {nTextAreas} text areas")
         for i in range(nTextAreas):
 
-            ta = label.Label(terminalio.FONT, text=f"_textAreas[{i}]", color=inactiveColor, x=lx, y=ly)
+            if i == 1: # item 1 is the active one. FIXME: kind of ad-hoc?
+                acolor = activeColor
+            else:
+                acolor = inactiveColor
+            ta = label.Label(terminalio.FONT, text=f"_textAreas[{i}]", color=acolor, x=lx, y=ly)
             text_group.append(ta)  # Subgroup for text scaling
             self._textAreas.append(ta)
             ly += yInc
 
         self.text_area_l_ = label.Label(terminalio.FONT, text="Control L", color=0x000000, x=10, y=60)
-        text_group.append(self.text_area_l_)  # Subgroup for text scaling
+        text_group.append(self.text_area_l_)
 
         self.text_area_r_ = label.Label(terminalio.FONT, text="Control R", color=0x000000, x=90, y=60)
-        text_group.append(self.text_area_r_)  # Subgroup for text scaling
+        text_group.append(self.text_area_r_)
 
         splash.append(text_group)
 
