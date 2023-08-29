@@ -8,7 +8,7 @@
 import supervisor
 supervisor.runtime.autoreload = False  # CirPy 8 and above
 
-DO_MAIN_CODE = False
+DO_MAIN_CODE = True
 
 # ----------------------------------------------------
 # This runs the main project code:
@@ -37,11 +37,7 @@ if DO_MAIN_CODE:
 import sys
 sys.path.insert(0, 'test')
 
-# i broke this; do I care? yes. FIXME
 import test_gestures2
-
-print("\n\nNOPE\n\n")
-
 
 # SOUND TESTS
 # doesn't work in /test dir
