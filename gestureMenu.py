@@ -1,5 +1,7 @@
 '''
     Class GestureMenu (& ancillary classes)
+    
+    Display a user menu and uses a APDS9960 gesture sensor to access it.
 
     TODO:
         - implement range options
@@ -30,9 +32,7 @@ class MenuItem():
 
 class MenuHandler():
     '''
-        behind the menu system.
-        first, you can use this to draw the menu and items in it.
-        also, if a gesture is detected, this class will let you know what changed.
+        Handle changes in selection, and returning selections.
     '''
     def __init__(self, menuListData) -> None:
 

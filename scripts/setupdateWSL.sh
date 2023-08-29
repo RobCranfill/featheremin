@@ -6,6 +6,6 @@
 function cpupdate() {
 	CPATH=/mnt/CIRCUITPY
 	sudo mount -t drvfs $1: $CPATH 
-	cp -uv $CPATH/feathereminMain.py $CPATH/feathereminDisplay?.py $CPATH/featherSynth?.py $CPATH/README.md $CPATH/gestureMenu.py .
-	cp -uv $CPATH/test/* ./test
+	cp -uv $CPATH/*.py .
+	cp -uv $CPATH/test/*.py ./test
 }

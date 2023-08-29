@@ -1,11 +1,14 @@
 # This 'main' file just imports whatever code I really want to run.
 # That is, the main project file or maybe test code.
-
+#
+# NOTICE - THIS SOMETIMES DOESNT WORK CORRECTLY! (Particularly for stuff in the 'test' subdir?)
+# See 'fallingForever*' :-/
+#
 # ----------------------------------------------------
 import supervisor
 supervisor.runtime.autoreload = False  # CirPy 8 and above
 
-DO_MAIN_CODE = True
+DO_MAIN_CODE = False
 
 # ----------------------------------------------------
 # This runs the main project code:
@@ -15,21 +18,10 @@ if DO_MAIN_CODE:
     while True:
         pass
 
-# import WTF as wtf
-# w = wtf.WTF()
-# w.test()
-# while True:
-#     pass
-
-
-
 # import board, feathereminDisplay2 as displayClass
 # TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET = board.A2, board.A0, board.A1
-
 # display = displayClass.FeathereminDisplay(180, TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET, True)
-
 # print(f"feathereminDisplay2 init OK? {display.init_OK}")
-
 # if display.init_OK:
 #     display.test() # does not return
 # else:
@@ -44,8 +36,12 @@ if DO_MAIN_CODE:
 # This lets us run stuff in the 'test' subdirectory:
 import sys
 sys.path.insert(0, 'test')
-# sys.path.insert(len(sys.path), 'test')
-# sys.path.insert(len(sys.path), '..')
+
+# i broke this; do I care? yes. FIXME
+import test_gestures2
+
+print("\n\nNOPE\n\n")
+
 
 # SOUND TESTS
 # doesn't work in /test dir
