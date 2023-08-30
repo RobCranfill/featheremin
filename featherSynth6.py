@@ -59,7 +59,8 @@ class FeatherSynth:
         self._audio.play(self._mixer)
         self._mixer.voice[0].play(self._synth)
 
-# FIXME: keep this? not sure
+
+        # FIXME: keep this? not sure
 
         # Build some waveforms
         #

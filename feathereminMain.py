@@ -66,10 +66,9 @@ TFT_DISPLAY_RESET = board.A1
 # The L0X defaults to I2C 0x29; we have two, one of which we will re-assign to this address.
 L0X_B_ALTERNATE_I2C_ADDR = 0x30
 
-ROTARY_ENCODER_I2C_ADDR = 0x36
-SEE_SAW_BUTTON_PIN_WTF = 24  # FIXME: wtf is this magic number?
-
-INITIAL_20W_AMP_VOLUME = 10 # 25 is max for 20W amp and 3W 4 ohm speaker with 12v to amp.
+# ROTARY_ENCODER_I2C_ADDR = 0x36
+# SEE_SAW_BUTTON_PIN_WTF = 24  # FIXME: wtf is this magic number?
+# INITIAL_20W_AMP_VOLUME = 10 # 25 is max for 20W amp and 3W 4 ohm speaker with 12v to amp.
 
 menuData = [ # 'item', 'options', and TODO: index - or value? - of default 
             [MENU_WAVE,    WAVEFORM_TYPES, 0],
@@ -257,8 +256,8 @@ def showMem():
     gc.collect()
     print(f"Free memory: {gc.mem_free()}")
 
-def displayWaveformName(disp, name):
-    disp.setTextAreaL(name)
+def displayLeftStatus(disp, wave, lfo):
+    disp.setTextAreaL(f"{wave}\n{lfo}")
 
 def displayLFOMode(disp, mode):
     disp.setTextAreaR(mode)
@@ -335,28 +334,28 @@ def main():
 
     # My "synthezier" object that does the stuff that I need.
     #
-    # synth = featherSynth5.FeatherSynth(AUDIO_OUT_PIN)
     synth = fSynth.FeatherSynth(USE_STEREO,
                                 i2s_bit_clock=AUDIO_OUT_I2S_BIT, 
                                 i2s_word_select=AUDIO_OUT_I2S_WORD, 
                                 i2s_data=AUDIO_OUT_I2S_DATA)
     synth.setVolume(0.75)
 
-    # FIXME:
+
     waveIndex = 0
     waveName = WAVEFORM_TYPES[waveIndex]
-    displayWaveformName(display, waveName)
     synth.setWaveformSquare()
 
     lfoIndex = 0
     lfoMode = LFO_MODES[lfoIndex]
-    # displayLFOMode(display, lfoMode)
+    
+    displayLeftStatus(display, waveName, lfoMode)
 
     dSleepMilliseconds = 0
     # displayDelay(display, dSleepMilliseconds)
 
     # iter = 1
-    wheelPositionLast = None
+    # wheelPositionLast = None
+    # wheelButtonHeld = False
 
     # Play notes from a chromatic scale, as opposed to a continuous range of frequencies?
     # That is, integer MIDI numbers .vs. fractional.
@@ -366,10 +365,8 @@ def main():
     # Instructions here?
     display.setTextAreaR("Started!")
 
-    wheelButtonHeld = False
-
-    neoState = False
-    neoTime = time.monotonic_ns()
+    # neoState = False
+    # neoTime = time.monotonic_ns()
 
     gmenu = gestureMenu.GestureMenu(gestureSensor, display, menuData, windowSize=4)
 
@@ -388,8 +385,10 @@ def main():
             if item == MENU_WAVE:
                 waveName = option
                 waveIndex = WAVEFORM_TYPES.index(waveName)
-                print(f" -> Wave #{waveIndex}: {waveName}")
-                displayWaveformName(display, waveName)
+                # print(f" -> Wave #{waveIndex}: {waveName}")
+
+                displayLeftStatus(display, waveName, lfoMode)
+
                 # FIXME: a better way to do this?
                 if waveIndex == 0:
                     synth.setWaveformSquare()
@@ -402,13 +401,14 @@ def main():
                 lfoMode = option
                 lfoIndex = LFO_MODES.index(lfoMode)
                 lfoMode = LFO_MODES[lfoIndex]
-                print(f" -> LFO #{lfoIndex}: {lfoMode}")
+                # print(f" -> LFO #{lfoIndex}: {lfoMode}")
 
-                # displayLFOMode(display, lfoMode)
+                displayLeftStatus(display, waveName, lfoMode)
 
                 if lfoIndex == 0:
                     synth.clearTremolo()
                     synth.clearVibrato()
+                    displayLFOMode(display, "")
                 elif lfoIndex == 1: # tremolo
                     synth.setTremolo(20)
                     synth.clearVibrato()
@@ -489,6 +489,7 @@ def main():
             synth.stop()
 
         # iter += 1
+
 
 # OK, let's do it! :-)
 #
