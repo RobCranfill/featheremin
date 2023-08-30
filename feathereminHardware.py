@@ -32,10 +32,6 @@ from adafruit_seesaw import seesaw, rotaryio, digitalio, neopixel
 # so we can re-program the address of the secondary one.
 L0X_A_RESET_OUT = board.D4
 
-# for I2S audio out
-AUDIO_OUT_I2S_BIT  = board.D9
-AUDIO_OUT_I2S_WORD = board.D10
-AUDIO_OUT_I2S_DATA = board.D11
 
 TFT_DISPLAY_CS    = board.A2
 TFT_DISPLAY_DC    = board.A0
@@ -80,6 +76,7 @@ class FeatereminHardware:
 
     def __init__(self):
 
+# was:
 # def init_hardware() -> tuple[adafruit_vl53l0x.VL53L0X,   # 'A' ToF sensor
 #                             adafruit_vl53l0x.VL53L0X,    # 'B' ToF sensor
 #                             APDS9960,                    # gesture sensor
@@ -103,7 +100,6 @@ class FeatereminHardware:
         # For fun
         showI2Cbus()
 
-        # FIXME: how do we do overloaded contsructors???
         if USE_SIMPLE_DISPLAY:
         # ----------------- Our display object - do this early so we can show errors?
             self._display = fDisplay.FeathereminDisplay(180, TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET, 4)
@@ -236,7 +232,7 @@ class FeatereminHardware:
         # end __init__
 
 
-    def getHarwareItems(self): # ->
+    def getHardwareItems(self): # ->
                     # tuple[
                     #     adafruit_vl53l0x.VL53L0X,   # 'A' ToF sensor
                     #     adafruit_vl53l0x.VL53L0X,    # 'B' ToF sensor
