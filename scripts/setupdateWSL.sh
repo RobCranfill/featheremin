@@ -7,5 +7,6 @@ function cpupdate() {
 	CPATH=/mnt/CIRCUITPY
 	sudo mount -t drvfs $1: $CPATH 
 	cp -uv $CPATH/*.py .
+	cp -uv $CPATH/README.md .
 	cp -uv $CPATH/test/*.py ./test
 }

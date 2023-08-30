@@ -451,7 +451,7 @@ def main():
                      # map to 8-16?
                     trem = map_and_scale(r2, 50, 500, 8, 16)
                     # print(f"r2 {r2} -> trem {trem}")
-                    displayLFOMode(display, f"Tremolo @ {trem:.1f}")
+                    displayLFOMode(display, f"T @ {trem:.1f}")
                     synth.setTremolo(trem)
 
                 elif lfoIndex == 2:
@@ -459,7 +459,7 @@ def main():
                     vib = map_and_scale(r2, 50, 500, 4, 10)
                     synth.setVibrato(r2a) 
                     # print(f"r2 {r2} -> vib ?")
-                    displayLFOMode(display, f"Vibrato @ {vib:.1f}")
+                    displayLFOMode(display, f"V @ {vib:.1f}")
 
             # drone mode
             if lfoIndex == 3:

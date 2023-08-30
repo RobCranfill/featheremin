@@ -11,21 +11,20 @@ Perhaps a follow-on project will explore more of what-all synthio has to offer.
 So far, almost all components are from [Adafruit](https://www.adafruit.com). I love Adafruit!
  * Feather RP2040 microcontroller (Adafruit product ID 4884). A simpler RPi Pico could work.
  * Two VL53L0X Time-of-Flight distance sensors (Adafruit product ID 3317)
- * <strike>VL53L4CD Time-of-Flight distance sensor (Adafruit product ID 5396)</strike>
  * APDS-9960 proximity/gesture sensor
  * 2.2" TFT display
- * I'm still trying to figure out how to amplify this. I've used:
-   * Generic/clone [Amazon](https://a.co/d/77fnhnu) PCM5102 I2S line out breakout board (current solution)
-     * Currently I am running this line out into a pair of small desktop speakers (Creative Pebble), which works really well.
-   * 3 watt I2S amp
-   * 1 watt STEMMA audio amplifier with speaker
-   * 20 watt audio amp with external speaker
- * A TRS 1/8" headphone connector
- * A rotary encoder, but I'm starting to think that's too much
+ * Generic/clone [Amazon](https://a.co/d/77fnhnu) PCM5102 I2S line out breakout board (current solution)
+   * Currently I am running this line out into a pair of small desktop speakers (Creative Pebble), which works really well.
+   * Past audio-out experiments have included, but rejected:
+     * 3 watt I2S amp
+     * 1 watt STEMMA audio amplifier with speaker
+     * 20 watt audio amp with external speaker
+ * <strike>VL53L4CD Time-of-Flight distance sensor (Adafruit product ID 5396)</strike>
+ * <strike>A rotary encoder, but I'm starting to think that's too much</strike>
  * A case, breadboard and miscellaneous other stuff to put them together.
 
 ## Software required
- * Latest Adafruit CircuitPython: 8.2.3 (8.2.x required for new 'synthio' stuff)
+ * Adafruit CircuitPython 8.2.x required for new 'synthio' stuff; testing with 8.2.4.
  * The following Adafruit support libraries; use 'circup' to install? The following is the output from the circup 'freeze' command at one particular point in time; you may as well use the latest-and-greatest.
 ```
 circup freeze
@@ -52,9 +51,10 @@ The I2C devices are chained together in no particular order, but the 20W amplifi
 must be last in the chain because it has no StemmaQT connector and is attached via a StemmaQT pigtail. 
 (It uses I2C to set volume only, not for audio data.)
 
+One of the VL53L0X's XSHUT pin is connected to a GPIO output pin so we can re-assign its I2C address.
+
 The ILI9341 display is wired to the Feather's hardware SPI interface via 6 wires (plus ground and 3.3v).
 
-One of the VL53L0X's XSHUT pin is connected to a GPIO output pin so we can re-assign its I2C address.
 
 ## Functionality
  * Sensors:
@@ -68,8 +68,8 @@ One of the VL53L0X's XSHUT pin is connected to a GPIO output pin so we can re-as
    * Gesture:
      * Up/down: waveform (square, saw, sine)
      * L/R: LFO mode: LFO OFF <-> LFO vol <-> LFO bend <-> Drone
-   * Wheel: delay time
-   * Wheel push: chromatic/continuous (/other - volume?)
+   * <strike>Wheel: delay time</strike>
+   * <strike>Wheel push: chromatic/continuous (/other - volume?)</strike>
    * Display
      * High-quality background that we can paint info onto - DONE, BUT USES TOO MUCH MEMORY?
        * Pseudo alphanumeric LED area for text
@@ -102,7 +102,7 @@ One of the VL53L0X's XSHUT pin is connected to a GPIO output pin so we can re-as
    * Hardware volume?
    * Kill/reset switch? (There is one on the Feather but it's inside the box!)
  * Errors
-   * Flash an LED (which one?) in some error pattern.
+   * Flash an LED (?) in some error pattern.
      * Bring an LED out to ? - top of box? The one on the rotary encoder? (Not quite visible)
   * Stereo - implemented, although not used much at all
 
@@ -116,14 +116,6 @@ One of the VL53L0X's XSHUT pin is connected to a GPIO output pin so we can re-as
 | D10    | LCK     |
 | D11    | DIN     |
 | GND    | SCK     | 
-
-
-### Pinouts/connections for MAX98357A I2S amplifier breakout (not currently used)
-| RP2040 | Max98357A |
-| ------ | --------- |
-| D9     | BCLK      |
-| D10    | LRC       |
-| D11    | DIN       |
 
 
 ### Pinouts for Adafruit 2.2" TFT and EyeSPI breakout
@@ -155,12 +147,21 @@ so we need to do some magic to make things work. See the code!
 | 0x39       | APDS-9960 Gesture sensor | Cannot be changed |
 
 
+### Pinouts/connections for MAX98357A I2S amplifier breakout (not currently used)
+| RP2040 | Max98357A |
+| ------ | --------- |
+| D9     | BCLK      |
+| D10    | LRC       |
+| D11    | DIN       |
+
+
 ### Common Mistakes and their solutions
 * Sometimes on startup, the logic for setting the I2C address of the 2nd VL53L0X doesn't work.
   * Just keep trying, it will work. (What's up with that?!)
 * "RuntimeError: No pull up found on SDA or SCL; check your wiring"
   * Loose connection on StemmaQT bus (first connector in chain?)
 
-### Demo Video
+
+## Demo Video
 * [On YouTube](https://youtu.be/wLTpfzRJ9J0)
 
