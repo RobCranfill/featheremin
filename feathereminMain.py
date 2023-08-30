@@ -27,9 +27,16 @@ from adafruit_apds9960.apds9960 import APDS9960
 from adafruit_seesaw import seesaw, rotaryio, digitalio, neopixel
 
 # Other Featheremin modules
-
+import feathereminHardware
 import featherSynth5 as fSynth
 import gestureMenu
+
+
+# for I2S audio out
+# TODO: this should be in Hardware object?
+AUDIO_OUT_I2S_BIT  = board.D9
+AUDIO_OUT_I2S_WORD = board.D10
+AUDIO_OUT_I2S_DATA = board.D11
 
 
 # in work
@@ -42,33 +49,33 @@ WAVEFORM_TYPES = ["Sine", "Square", "Saw"]
 MENU_LFO = "LFO"
 LFO_MODES = ["Off", "Tremolo", "Vibrato", "Drone"]
 
-# GPIO pins used:
-# The GPIO pin we use to turn the 'primary' ("A") ToF sensor off,
-# so we can re-program the address of the secondary one.
-L0X_A_RESET_OUT = board.D4
+# # GPIO pins used:
+# # The GPIO pin we use to turn the 'primary' ("A") ToF sensor off,
+# # so we can re-program the address of the secondary one.
+# L0X_A_RESET_OUT = board.D4
 
-# for I2S audio out
-AUDIO_OUT_I2S_BIT  = board.D9
-AUDIO_OUT_I2S_WORD = board.D10
-AUDIO_OUT_I2S_DATA = board.D11
+# # for I2S audio out
+# AUDIO_OUT_I2S_BIT  = board.D9
+# AUDIO_OUT_I2S_WORD = board.D10
+# AUDIO_OUT_I2S_DATA = board.D11
 
-# TFT display
-USE_SIMPLE_DISPLAY = True
-if USE_SIMPLE_DISPLAY:
-    import feathereminDisplay3 as fDisplay
-else:
-    import feathereminDisplay2 as fDisplay
+# # TFT display
+# USE_SIMPLE_DISPLAY = True
+# if USE_SIMPLE_DISPLAY:
+#     import feathereminDisplay3 as fDisplay
+# else:
+#     import feathereminDisplay2 as fDisplay
 
-TFT_DISPLAY_CS    = board.A2
-TFT_DISPLAY_DC    = board.A0
-TFT_DISPLAY_RESET = board.A1
+# TFT_DISPLAY_CS    = board.A2
+# TFT_DISPLAY_DC    = board.A0
+# TFT_DISPLAY_RESET = board.A1
 
-# The L0X defaults to I2C 0x29; we have two, one of which we will re-assign to this address.
-L0X_B_ALTERNATE_I2C_ADDR = 0x30
+# # The L0X defaults to I2C 0x29; we have two, one of which we will re-assign to this address.
+# L0X_B_ALTERNATE_I2C_ADDR = 0x30
 
-# ROTARY_ENCODER_I2C_ADDR = 0x36
-# SEE_SAW_BUTTON_PIN_WTF = 24  # FIXME: wtf is this magic number?
-# INITIAL_20W_AMP_VOLUME = 10 # 25 is max for 20W amp and 3W 4 ohm speaker with 12v to amp.
+# # ROTARY_ENCODER_I2C_ADDR = 0x36
+# # SEE_SAW_BUTTON_PIN_WTF = 24  # FIXME: wtf is this magic number?
+# # INITIAL_20W_AMP_VOLUME = 10 # 25 is max for 20W amp and 3W 4 ohm speaker with 12v to amp.
 
 menuData = [ # 'item', 'options', and TODO: index - or value? - of default 
             [MENU_WAVE,    WAVEFORM_TYPES, 0],
@@ -80,176 +87,176 @@ menuData = [ # 'item', 'options', and TODO: index - or value? - of default
             # ["Volume",      ["20", 40, 60, 80, 100], 4],
             ]
 
-def showI2Cbus():
-    i2c = board.I2C()
-    if i2c.try_lock():
-        print(f"I2C addresses found: {[hex(x) for x in i2c.scan()]}")
-        i2c.unlock()
+# def showI2Cbus():
+#     i2c = board.I2C()
+#     if i2c.try_lock():
+#         print(f"I2C addresses found: {[hex(x) for x in i2c.scan()]}")
+#         i2c.unlock()
 
 
-def init_hardware() -> tuple[adafruit_vl53l0x.VL53L0X,   # 'A' ToF sensor
-                            adafruit_vl53l0x.VL53L0X,    # 'B' ToF sensor
-                            APDS9960,                    # gesture sensor
-                            fDisplay.FeathereminDisplay, # our display object
-                            adafruit_max9744.MAX9744,    # big amplifier, or None
-                            rotaryio.IncrementalEncode,  # rotary encoder
-                            digitalio.DigitalIO,         # pushbutton in rotary encoder
-                            neopixel.NeoPixel            # neopixel in rotary encoder
-                            ]:
+# def init_hardware() -> tuple[adafruit_vl53l0x.VL53L0X,   # 'A' ToF sensor
+#                             adafruit_vl53l0x.VL53L0X,    # 'B' ToF sensor
+#                             APDS9960,                    # gesture sensor
+#                             fDisplay.FeathereminDisplay, # our display object
+#                             adafruit_max9744.MAX9744,    # big amplifier, or None
+#                             rotaryio.IncrementalEncode,  # rotary encoder
+#                             digitalio.DigitalIO,         # pushbutton in rotary encoder
+#                             neopixel.NeoPixel            # neopixel in rotary encoder
+#                             ]:
     
-    """Initialize various hardware items.
-    Namely, the I2C bus, Time of Flight sensors, gesture sensor, display, and amp (if attached).
+#     """Initialize various hardware items.
+#     Namely, the I2C bus, Time of Flight sensors, gesture sensor, display, and amp (if attached).
 
-    Mostly none of this checks for errors (missing hardware) yet - it will just malf.
+#     Mostly none of this checks for errors (missing hardware) yet - it will just malf.
 
-    Returns:
-        list of objects: the various hardware items initialized.
-    """
+#     Returns:
+#         list of objects: the various hardware items initialized.
+#     """
 
-    # supervisor.reload()
+#     # supervisor.reload()
 
-    # Easist way to init I2C on a Feather:
-    try:
-        i2c = board.STEMMA_I2C()
-    except:
-        print("board.STEMMA_I2C failed! Is the Stemma bus connected? It would seem not.")
-        return tuple()
+#     # Easist way to init I2C on a Feather:
+#     try:
+#         i2c = board.STEMMA_I2C()
+#     except:
+#         print("board.STEMMA_I2C failed! Is the Stemma bus connected? It would seem not.")
+#         return tuple()
 
-    # For fun
-    showI2Cbus()
-
-
-    # FIXME: how do we do overloaded contsructors???
-    if USE_SIMPLE_DISPLAY:
-    # ----------------- Our display object - do this early so we can show errors?
-        display = fDisplay.FeathereminDisplay(180, TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET, 4)
-    else:
-        display = fDisplay.FeathereminDisplay(180, False, TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET)
-
-    print("Display init OK")
+#     # For fun
+#     showI2Cbus()
 
 
-    # ----------------- 'Primary' VL53L0X time-of-flight sensor
-    # 'Primary' ToF - this has its XSHUT pin wired to GPIO {L0X_A_RESET_OUT}.
-    # We will finish setting this sensor up 
-    # *after* we turn it off and init the 'secondary' ToF sensor.
+#     # FIXME: how do we do overloaded contsructors???
+#     if USE_SIMPLE_DISPLAY:
+#     # ----------------- Our display object - do this early so we can show errors?
+#         display = fDisplay.FeathereminDisplay(180, TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET, 4)
+#     else:
+#         display = fDisplay.FeathereminDisplay(180, False, TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET)
+
+#     print("Display init OK")
+
+
+#     # ----------------- 'Primary' VL53L0X time-of-flight sensor
+#     # 'Primary' ToF - this has its XSHUT pin wired to GPIO {L0X_A_RESET_OUT}.
+#     # We will finish setting this sensor up 
+#     # *after* we turn it off and init the 'secondary' ToF sensor.
     
-    # Turn off this ToF sensor - take XSHUT pin low.
-    #
-    print("Turning off 'primary' VL53L0X...")
-    L0X_A_reset = feather_digitalio.DigitalInOut(L0X_A_RESET_OUT)
-    L0X_A_reset.direction = feather_digitalio.Direction.OUTPUT
-    L0X_A_reset.value = False
+#     # Turn off this ToF sensor - take XSHUT pin low.
+#     #
+#     print("Turning off 'primary' VL53L0X...")
+#     L0X_A_reset = feather_digitalio.DigitalInOut(L0X_A_RESET_OUT)
+#     L0X_A_reset.direction = feather_digitalio.Direction.OUTPUT
+#     L0X_A_reset.value = False
 
-    # Prmary VL53L0X sensor is now turned off
-    showI2Cbus()
-
-
-    # ----------------- 'Secondary' VL53L0X time-of-flight sensor
-    # 'Secondary' ToF - the one DIDN'T wire the XSHUT pin to.
-    # First, see if it's there already with the non-default address (left over from a previous run).
-    # If so, we don't need to re-assign it.
-    try:
-        L0X_B = adafruit_vl53l0x.VL53L0X(i2c, address=L0X_B_ALTERNATE_I2C_ADDR)
-        print(f"Found secondary VL53L0X at {hex(L0X_B_ALTERNATE_I2C_ADDR)}; OK")
-    except:
-        print(f"Did not find secondary VL53L0X at {hex(L0X_B_ALTERNATE_I2C_ADDR)}, trying default....")
-        try:
-            # Try at the default address
-            L0X_B = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
-            print(f"Found VL53L0X at default address; setting to {hex(L0X_B_ALTERNATE_I2C_ADDR)}...")
-            L0X_B.set_address(L0X_B_ALTERNATE_I2C_ADDR)  # address assigned should NOT be already in use
-            print("VL53L0X set_address OK")
-
-            # Set params for the sensor?
-            # # The default timing budget is 33ms, a good compromise of speed and accuracy.
-            # # For example a higher speed but less accurate timing budget of 20ms:
-            # L0X_B.measurement_timing_budget = 20000
-            # # Or a slower but more accurate timing budget of 200ms:
-            # L0X_B.measurement_timing_budget = 200000
-
-            print("Secondary VL53L0X init OK")
-        except Exception as e:
-            print(f"**** Caught exception: {e}")
-            print("**** No secondary VL53L0X?")
-            L0X_B = None
+#     # Prmary VL53L0X sensor is now turned off
+#     showI2Cbus()
 
 
-    # ----------------- VL53L0X time-of-flight sensor, part 2
-    # Turn L0X back on and instantiate its object
-    print("Turning 'primary' VL53L0X back on...")
-    L0X_A_reset.value = True
-    L0X_A = None
-    try:
-        L0X_A = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
-        # Set params for the sensor?
+#     # ----------------- 'Secondary' VL53L0X time-of-flight sensor
+#     # 'Secondary' ToF - the one DIDN'T wire the XSHUT pin to.
+#     # First, see if it's there already with the non-default address (left over from a previous run).
+#     # If so, we don't need to re-assign it.
+#     try:
+#         L0X_B = adafruit_vl53l0x.VL53L0X(i2c, address=L0X_B_ALTERNATE_I2C_ADDR)
+#         print(f"Found secondary VL53L0X at {hex(L0X_B_ALTERNATE_I2C_ADDR)}; OK")
+#     except:
+#         print(f"Did not find secondary VL53L0X at {hex(L0X_B_ALTERNATE_I2C_ADDR)}, trying default....")
+#         try:
+#             # Try at the default address
+#             L0X_B = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
+#             print(f"Found VL53L0X at default address; setting to {hex(L0X_B_ALTERNATE_I2C_ADDR)}...")
+#             L0X_B.set_address(L0X_B_ALTERNATE_I2C_ADDR)  # address assigned should NOT be already in use
+#             print("VL53L0X set_address OK")
 
-        print("'Primary' VL53L0X init OK")
-    except:
-        print("**** No primary VL53L0X? Continuing....")
+#             # Set params for the sensor?
+#             # # The default timing budget is 33ms, a good compromise of speed and accuracy.
+#             # # For example a higher speed but less accurate timing budget of 20ms:
+#             # L0X_B.measurement_timing_budget = 20000
+#             # # Or a slower but more accurate timing budget of 200ms:
+#             # L0X_B.measurement_timing_budget = 200000
 
-    # Show bus again?
-    showI2Cbus()
-
-
-    # ----------------- APDS9960 gesture/proximity/color sensor
-    apds = None
-    try:
-        apds = APDS9960(i2c)
-        apds.enable_proximity = True
-        apds.enable_gesture = True
-        apds.rotation = 90
-        print("APDS9960 init OK")
-    except:
-        print("**** No APDS9960? Continuing....")
-
-
-    # ------------------ MAX9744 amp, if any
-    # TODO: merge this into the Synth object? Or at least hand it to that object to use?
-    amp = None
-    # try:
-    #     amp = adafruit_max9744.MAX9744(i2c)
-    #     amp.volume = INITIAL_20W_AMP_VOLUME
-    #     print("MAX9744 amp init OK")
-    # except Exception as e:
-    #     print(f"No MAX9744 amplifier found: '{e}' - OK?")
-    #     amp = None
-
-    # ------------------ Rotary encoder
-    encoder, wheel_button, pixel = None, None, None
-    # try:
-    #     ss = seesaw.Seesaw(i2c, addr=ROTARY_ENCODER_I2C_ADDR)
-    #     seesaw_v = (ss.get_version() >> 16) & 0xFFFF
-    #     # print(f"Found product {seesaw_v}")
-    #     if seesaw_v != 4991:
-    #         print("Wrong rotary encoder firmware version? Continuing...")
-    #         # what are we supposed to do about this??
-    #     encoder = rotaryio.IncrementalEncoder(ss)
-    #
-    #     # the "button" that is got by pushing down on the encoder wheel
-    #     ss.pin_mode(SEE_SAW_BUTTON_PIN_WTF, ss.INPUT_PULLUP)
-    #     wheel_button = digitalio.DigitalIO(ss, 24)
-    #
-    #     # TODO: tried to do something with the Neopixel but haven't figured anything out yet. :-/
-    #     pixel = neopixel.NeoPixel(ss, 6, 1)
-    #   
-    #     pixel.fill(0x000100) # very light green - for go!
-    #     # pixel.brightness = 0.1
-    #
-    #     print("Rotary encoder init OK")
-    #
-    # except:
-    #     print(f"\n**** No rotary encoder at I2C {hex(ROTARY_ENCODER_I2C_ADDR)}? OK\n")
+#             print("Secondary VL53L0X init OK")
+#         except Exception as e:
+#             print(f"**** Caught exception: {e}")
+#             print("**** No secondary VL53L0X?")
+#             L0X_B = None
 
 
-    showMem()
-    print("")
-    print("init_hardware OK!")
-    print("")
+#     # ----------------- VL53L0X time-of-flight sensor, part 2
+#     # Turn L0X back on and instantiate its object
+#     print("Turning 'primary' VL53L0X back on...")
+#     L0X_A_reset.value = True
+#     L0X_A = None
+#     try:
+#         L0X_A = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
+#         # Set params for the sensor?
 
-    return L0X_A, L0X_B, apds, display, amp, encoder, wheel_button, pixel
+#         print("'Primary' VL53L0X init OK")
+#     except:
+#         print("**** No primary VL53L0X? Continuing....")
 
-    # end init_hardware()
+#     # Show bus again?
+#     showI2Cbus()
+
+
+#     # ----------------- APDS9960 gesture/proximity/color sensor
+#     apds = None
+#     try:
+#         apds = APDS9960(i2c)
+#         apds.enable_proximity = True
+#         apds.enable_gesture = True
+#         apds.rotation = 90
+#         print("APDS9960 init OK")
+#     except:
+#         print("**** No APDS9960? Continuing....")
+
+
+#     # ------------------ MAX9744 amp, if any
+#     # TODO: merge this into the Synth object? Or at least hand it to that object to use?
+#     amp = None
+#     # try:
+#     #     amp = adafruit_max9744.MAX9744(i2c)
+#     #     amp.volume = INITIAL_20W_AMP_VOLUME
+#     #     print("MAX9744 amp init OK")
+#     # except Exception as e:
+#     #     print(f"No MAX9744 amplifier found: '{e}' - OK?")
+#     #     amp = None
+
+#     # ------------------ Rotary encoder
+#     encoder, wheel_button, pixel = None, None, None
+#     # try:
+#     #     ss = seesaw.Seesaw(i2c, addr=ROTARY_ENCODER_I2C_ADDR)
+#     #     seesaw_v = (ss.get_version() >> 16) & 0xFFFF
+#     #     # print(f"Found product {seesaw_v}")
+#     #     if seesaw_v != 4991:
+#     #         print("Wrong rotary encoder firmware version? Continuing...")
+#     #         # what are we supposed to do about this??
+#     #     encoder = rotaryio.IncrementalEncoder(ss)
+#     #
+#     #     # the "button" that is got by pushing down on the encoder wheel
+#     #     ss.pin_mode(SEE_SAW_BUTTON_PIN_WTF, ss.INPUT_PULLUP)
+#     #     wheel_button = digitalio.DigitalIO(ss, 24)
+#     #
+#     #     # TODO: tried to do something with the Neopixel but haven't figured anything out yet. :-/
+#     #     pixel = neopixel.NeoPixel(ss, 6, 1)
+#     #   
+#     #     pixel.fill(0x000100) # very light green - for go!
+#     #     # pixel.brightness = 0.1
+#     #
+#     #     print("Rotary encoder init OK")
+#     #
+#     # except:
+#     #     print(f"\n**** No rotary encoder at I2C {hex(ROTARY_ENCODER_I2C_ADDR)}? OK\n")
+
+
+#     showMem()
+#     print("")
+#     print("init_hardware OK!")
+#     print("")
+
+#     return L0X_A, L0X_B, apds, display, amp, encoder, wheel_button, pixel
+
+#     # end init_hardware()
 
 
 def showMem():
@@ -304,15 +311,20 @@ def main():
     supervisor.runtime.autoreload = False  # CirPy 8 and above
     print("supervisor.runtime.autoreload = False")
 
+
+
     # Initialize the hardware, dying if something critical is missing.
     # Just plain None back is super bad.
     #
-    hw_result = init_hardware()
-    if hw_result is tuple(): # FIXME: doesn't work right
-        showFatalErrorAndHalt("init_hardware failed!")
+    # hw_result = init_hardware()
+    # if hw_result is tuple(): # FIXME: doesn't work right
+    #     showFatalErrorAndHalt("init_hardware failed!")
+    # tof_A, tof_B, gestureSensor, display, amp, wheel, wheelButton, wheelLED = hw_result
 
-    tof_A, tof_B, gestureSensor, display, amp, wheel, wheelButton, wheelLED = hw_result
-    
+    hw_wrapper = feathereminHardware.FeatereminHardware()
+    tof_A, tof_B, gestureSensor, display = hw_wrapper.getHarwareItems()
+
+
     # What missing hardware can we tolerate?
     #####
     # Check only for the two really, really required things?
