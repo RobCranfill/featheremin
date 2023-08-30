@@ -109,6 +109,10 @@ class FeathereminDisplay:
         return self._textAreas
     
     def setTextAreaN(self, n, pText):
+        # print(f"display item {n} of {len(self._textAreas)}")
+        if n >= self._nTextAreas:
+            print("Bad call to setTextAreaN!")
+            return
         self._textAreas[n].text = pText
 
     def setTextArea1(self, pText):

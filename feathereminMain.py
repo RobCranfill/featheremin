@@ -29,14 +29,18 @@ from adafruit_seesaw import seesaw, rotaryio, digitalio, neopixel
 # Other Featheremin modules
 
 import featherSynth5 as fSynth
+import gestureMenu
+
 
 # in work
 USE_STEREO = True
 
 
 # No 'enum' in circuitpython! :-(
-WAVEFORM_TYPES = ["Square", "Sine", "Saw"]
-LFO_MODES = ["LFO Off", "Tremolo", "Vibrato", "Drone"]
+MENU_WAVE = "Waveform"
+WAVEFORM_TYPES = ["Sine", "Square", "Saw"]
+MENU_LFO = "LFO"
+LFO_MODES = ["Off", "Tremolo", "Vibrato", "Drone"]
 
 # GPIO pins used:
 # The GPIO pin we use to turn the 'primary' ("A") ToF sensor off,
@@ -51,7 +55,7 @@ AUDIO_OUT_I2S_DATA = board.D11
 # TFT display
 USE_SIMPLE_DISPLAY = True
 if USE_SIMPLE_DISPLAY:
-    import feathereminDisplay1 as fDisplay
+    import feathereminDisplay3 as fDisplay
 else:
     import feathereminDisplay2 as fDisplay
 
@@ -67,6 +71,15 @@ SEE_SAW_BUTTON_PIN_WTF = 24  # FIXME: wtf is this magic number?
 
 INITIAL_20W_AMP_VOLUME = 10 # 25 is max for 20W amp and 3W 4 ohm speaker with 12v to amp.
 
+menuData = [ # 'item', 'options', and TODO: index - or value? - of default 
+            [MENU_WAVE,    WAVEFORM_TYPES, 0],
+            [MENU_LFO,     LFO_MODES, 0],
+            ["Chromatic",   [True, False], 0],
+            ["Bogus 1",     ["A", "B", "C"], 0],
+            ["Bogus 2",     ["A", "B", "C"], 1]
+            # ["Delay",       [0, 1, 2, 3, 4, 5], 0],
+            # ["Volume",      ["20", 40, 60, 80, 100], 4],
+            ]
 
 def showI2Cbus():
     i2c = board.I2C()
@@ -110,29 +123,32 @@ def init_hardware() -> tuple[adafruit_vl53l0x.VL53L0X,   # 'A' ToF sensor
     # FIXME: how do we do overloaded contsructors???
     if USE_SIMPLE_DISPLAY:
     # ----------------- Our display object - do this early so we can show errors?
-        display = fDisplay.FeathereminDisplay(180, TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET)
+        display = fDisplay.FeathereminDisplay(180, TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET, 4)
     else:
         display = fDisplay.FeathereminDisplay(180, False, TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET)
 
     print("Display init OK")
 
 
-    # ----------------- VL53L0X time-of-flight sensor 
+    # ----------------- 'Primary' VL53L0X time-of-flight sensor
+    # 'Primary' ToF - this has its XSHUT pin wired to GPIO {L0X_A_RESET_OUT}.
     # We will finish setting this sensor up 
     # *after* we turn it off and init the 'secondary' ToF sensor.
     
-    # Turn off the ToF sensor - take XSHUT pin low
-    print("Turning off primary VL53L0X...")
+    # Turn off this ToF sensor - take XSHUT pin low.
+    #
+    print("Turning off 'primary' VL53L0X...")
     L0X_A_reset = feather_digitalio.DigitalInOut(L0X_A_RESET_OUT)
     L0X_A_reset.direction = feather_digitalio.Direction.OUTPUT
     L0X_A_reset.value = False
-    # VL53L0X sensor is now turned off
+
+    # Prmary VL53L0X sensor is now turned off
     showI2Cbus()
 
 
-    # ----------------- VL53L4CD time-of-flight sensor
+    # ----------------- 'Secondary' VL53L0X time-of-flight sensor
     # 'Secondary' ToF - the one DIDN'T wire the XSHUT pin to.
-    # First, see if it's there with the new address (left over from a previous run).
+    # First, see if it's there already with the non-default address (left over from a previous run).
     # If so, we don't need to re-assign it.
     try:
         L0X_B = adafruit_vl53l0x.VL53L0X(i2c, address=L0X_B_ALTERNATE_I2C_ADDR)
@@ -162,7 +178,7 @@ def init_hardware() -> tuple[adafruit_vl53l0x.VL53L0X,   # 'A' ToF sensor
 
     # ----------------- VL53L0X time-of-flight sensor, part 2
     # Turn L0X back on and instantiate its object
-    print("Turning VL53L0X back on...")
+    print("Turning 'primary' VL53L0X back on...")
     L0X_A_reset.value = True
     L0X_A = None
     try:
@@ -192,64 +208,67 @@ def init_hardware() -> tuple[adafruit_vl53l0x.VL53L0X,   # 'A' ToF sensor
     # ------------------ MAX9744 amp, if any
     # TODO: merge this into the Synth object? Or at least hand it to that object to use?
     amp = None
-    try:
-        amp = adafruit_max9744.MAX9744(i2c)
-        amp.volume = INITIAL_20W_AMP_VOLUME
-        print("MAX9744 amp init OK")
-    except Exception as e:
-        print(f"No MAX9744 amplifier found; {e} OK?")
-        amp = None
+    # try:
+    #     amp = adafruit_max9744.MAX9744(i2c)
+    #     amp.volume = INITIAL_20W_AMP_VOLUME
+    #     print("MAX9744 amp init OK")
+    # except Exception as e:
+    #     print(f"No MAX9744 amplifier found: '{e}' - OK?")
+    #     amp = None
 
     # ------------------ Rotary encoder
     encoder, wheel_button, pixel = None, None, None
-    try:
-        ss = seesaw.Seesaw(i2c, addr=ROTARY_ENCODER_I2C_ADDR)
-        seesaw_v = (ss.get_version() >> 16) & 0xFFFF
-        # print(f"Found product {seesaw_v}")
-        if seesaw_v != 4991:
-            print("Wrong rotary encoder firmware version? Continuing...")
-            # what are we supposed to do about this??
-        encoder = rotaryio.IncrementalEncoder(ss)
+    # try:
+    #     ss = seesaw.Seesaw(i2c, addr=ROTARY_ENCODER_I2C_ADDR)
+    #     seesaw_v = (ss.get_version() >> 16) & 0xFFFF
+    #     # print(f"Found product {seesaw_v}")
+    #     if seesaw_v != 4991:
+    #         print("Wrong rotary encoder firmware version? Continuing...")
+    #         # what are we supposed to do about this??
+    #     encoder = rotaryio.IncrementalEncoder(ss)
+    #
+    #     # the "button" that is got by pushing down on the encoder wheel
+    #     ss.pin_mode(SEE_SAW_BUTTON_PIN_WTF, ss.INPUT_PULLUP)
+    #     wheel_button = digitalio.DigitalIO(ss, 24)
+    #
+    #     # TODO: tried to do something with the Neopixel but haven't figured anything out yet. :-/
+    #     pixel = neopixel.NeoPixel(ss, 6, 1)
+    #   
+    #     pixel.fill(0x000100) # very light green - for go!
+    #     # pixel.brightness = 0.1
+    #
+    #     print("Rotary encoder init OK")
+    #
+    # except:
+    #     print(f"\n**** No rotary encoder at I2C {hex(ROTARY_ENCODER_I2C_ADDR)}? OK\n")
 
-        # the "button" that is got by pushing down on the encoder wheel
-        ss.pin_mode(SEE_SAW_BUTTON_PIN_WTF, ss.INPUT_PULLUP)
-        wheel_button = digitalio.DigitalIO(ss, 24)
-
-        # TODO: tried to do something with the Neopixel but haven't figured anything out yet. :-/
-        pixel = neopixel.NeoPixel(ss, 6, 1)
-        
-        pixel.fill(0x000100) # very light green - for go!
-        # pixel.brightness = 0.1
-
-        print("Rotary encoder init OK")
-    
-    except:
-        print(f"\n**** No rotary encoder at I2C {hex(ROTARY_ENCODER_I2C_ADDR)}? Can't continue!\n")
-        # return
 
     showMem()
     print("")
     print("init_hardware OK!")
     print("")
 
-
     return L0X_A, L0X_B, apds, display, amp, encoder, wheel_button, pixel
+
+    # end init_hardware()
+
 
 def showMem():
     gc.collect()
     print(f"Free memory: {gc.mem_free()}")
 
-def displayChromaticMode(disp, chromaticFlag):
-    disp.setTextAreaL("Chromatic" if chromaticFlag else "Continuous")
-
-def displayDelay(disp, sleepMS):
-    disp.setTextArea2(f"Sleep: {sleepMS} ms")
-
 def displayWaveformName(disp, name):
-    disp.setTextArea1(f"Waveform: {name}")
+    disp.setTextAreaL(name)
 
 def displayLFOMode(disp, mode):
-    disp.setTextArea3(mode)
+    disp.setTextAreaR(mode)
+
+# def displayChromaticMode(disp, chromaticFlag):
+#     disp.setTextAreaL("Chromatic" if chromaticFlag else "Continuous")
+#
+# def displayDelay(disp, sleepMS):
+#     disp.setTextArea2(f"Sleep: {sleepMS} ms")
+
 
 '''
  Restrict the input number to the given range.
@@ -323,17 +342,18 @@ def main():
                                 i2s_data=AUDIO_OUT_I2S_DATA)
     synth.setVolume(0.75)
 
+    # FIXME:
     waveIndex = 0
-    waveName  = WAVEFORM_TYPES[waveIndex]
+    waveName = WAVEFORM_TYPES[waveIndex]
     displayWaveformName(display, waveName)
     synth.setWaveformSquare()
 
     lfoIndex = 0
     lfoMode = LFO_MODES[lfoIndex]
-    displayLFOMode(display, lfoMode)
+    # displayLFOMode(display, lfoMode)
 
     dSleepMilliseconds = 0
-    displayDelay(display, dSleepMilliseconds)
+    # displayDelay(display, dSleepMilliseconds)
 
     # iter = 1
     wheelPositionLast = None
@@ -341,7 +361,7 @@ def main():
     # Play notes from a chromatic scale, as opposed to a continuous range of frequencies?
     # That is, integer MIDI numbers .vs. fractional.
     chromatic = True
-    displayChromaticMode(display, chromatic)
+    # displayChromaticMode(display, chromatic)
 
     # Instructions here?
     display.setTextAreaR("Started!")
@@ -351,106 +371,57 @@ def main():
     neoState = False
     neoTime = time.monotonic_ns()
 
+    gmenu = gestureMenu.GestureMenu(gestureSensor, display, menuData, windowSize=4)
+
     showMem()
 
+    #
     # ==== Main loop ===============================================================
+    #
     while True:
-
-        if time.monotonic_ns() - neoTime > 10e7:
-            # print(f"delta {time.monotonic_ns() - neoTime}")
-            neoTime = time.monotonic_ns()
-            neoState = not neoState
-            if wheelLED:
-                wheelLED.fill(0x000100 if neoState else 0x0)
-
-        # Rotary encoder wheel.
-        # negate the position to make clockwise rotation positive
-        if wheel:
-            position = -wheel.position
-            if position != wheelPositionLast:
-                wheelPositionLast = position
-
-                # FIDME: even tho we limit the value we *use*, 
-                # the hidden 'position' goes way out of bounds which works oddly. Fix!
-                dSleepMilliseconds = clamp(position, 0, 100)
-
-                # print(f"Wheel {position} - > d = {dSleepMilliseconds}")
-                displayDelay(display, dSleepMilliseconds)
-
-            wheelButtonPressed = not wheelButton.value
-            if wheelButtonPressed and not wheelButtonHeld:
-                chromatic = not chromatic
-                displayChromaticMode(display, chromatic)
-                print(f"chromatic: {chromatic}")
-                wheelButtonHeld = True
-            if not wheelButtonPressed:
-                wheelButtonHeld = False
 
         # Handle a gesture?
         #
-        changedWaveform = False
-        changedLFO = False
+        item, option = gmenu.getItemAndOption()
+        if item is not None:
+            print(f"Gesture event: '{item}' / '{option}'")
+            if item == MENU_WAVE:
+                waveName = option
+                waveIndex = WAVEFORM_TYPES.index(waveName)
+                print(f" -> Wave #{waveIndex}: {waveName}")
+                displayWaveformName(display, waveName)
+                # FIXME: a better way to do this?
+                if waveIndex == 0:
+                    synth.setWaveformSquare()
+                elif waveIndex == 1:
+                    synth.setWaveformSine()
+                elif waveIndex == 2:
+                    synth.setWaveformSaw()
 
-        gestureValue = 0
-        if gestureSensor:
-            gestureValue = gestureSensor.gesture()
-        # print(f"gestureValue: {gestureValue}")
+            elif item == MENU_LFO:
+                lfoMode = option
+                lfoIndex = LFO_MODES.index(lfoMode)
+                lfoMode = LFO_MODES[lfoIndex]
+                print(f" -> LFO #{lfoIndex}: {lfoMode}")
 
-        if gestureValue == 1: # down
-            waveIndex = waveIndex - 1
-            if waveIndex < 0:
-                waveIndex = len(WAVEFORM_TYPES)-1
-            changedWaveform = True
-        elif gestureValue == 2: # up
-            waveIndex = waveIndex + 1
-            if waveIndex >= len(WAVEFORM_TYPES):
-                waveIndex = 0
-            changedWaveform = True
-        elif gestureValue == 3: # right
-            lfoIndex = lfoIndex + 1
-            if lfoIndex >= len(LFO_MODES):
-                lfoIndex = 0
-            changedLFO = True
-        elif gestureValue == 4: # left
-            lfoIndex = lfoIndex - 1
-            if lfoIndex < 0:
-                lfoIndex = len(LFO_MODES)-1
-            changedLFO = True
+                # displayLFOMode(display, lfoMode)
 
-        if changedWaveform:
-            waveName = WAVEFORM_TYPES[waveIndex]
-            print(f" -> Wave #{waveIndex}: {waveName}")
-            displayWaveformName(display, waveName)
-            # FIXME: a better way to do this?
-            if waveIndex == 0:
-                synth.setWaveformSquare()
-            elif waveIndex == 1:
-                synth.setWaveformSine()
-            elif waveIndex == 2:
-                synth.setWaveformSaw()
+                if lfoIndex == 0:
+                    synth.clearTremolo()
+                    synth.clearVibrato()
+                elif lfoIndex == 1: # tremolo
+                    synth.setTremolo(20)
+                    synth.clearVibrato()
+                elif lfoIndex == 2: # vibrato
+                    synth.setVibrato(20)
+                    synth.clearTremolo()
+                elif lfoIndex == 3: # dual/drone
+                    synth.clearVibrato()
+                    synth.clearTremolo()
+                    synth.startDrone(1000, 1100)
 
-        if changedLFO:
-            lfoMode = LFO_MODES[lfoIndex]
-            print(f" -> LFO #{lfoIndex}: {lfoMode}")
-            displayLFOMode(display, lfoMode)
 
-            if lfoIndex == 0:
-                synth.clearTremolo()
-                synth.clearVibrato()
-
-            elif lfoIndex == 1: # tremolo
-                synth.setTremolo(20)
-                synth.clearVibrato()
-
-            elif lfoIndex == 2: # vibrato
-                synth.setVibrato(20)
-                synth.clearTremolo()
-
-            elif lfoIndex == 3: # dual/drone
-                synth.clearVibrato()
-                synth.clearTremolo()
-                synth.startDrone(1000, 1100)
-
+        # Make some noise!
 
         # Get the two ranges, as available. 
         #
@@ -519,5 +490,6 @@ def main():
 
         # iter += 1
 
-
-main() # :-)
+# OK, let's do it! :-)
+#
+main()

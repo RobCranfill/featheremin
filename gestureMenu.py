@@ -139,11 +139,9 @@ class GestureMenu:
 
 
     def updateDisplay(self):
-        # with current state
-        # draw windowSize items centered (?) on the selected one.
-        # - only tested for odd values of _windowSize
-        # - FIXME actually, pretty much only works for _windowSize = 3
-        # 
+        '''
+            Display {windowSize} items, with the selected one in the 2nd position (index 1).
+        '''
         allKeys = self._menuHandler.getItems()
 
         # find the keys of the menu items to display
@@ -154,10 +152,15 @@ class GestureMenu:
         for k in allKeys:
             keyList.append(k)
         
+        # print(f"displaying {self._windowSize} items")
+
         startLookingAt = 1 # not quite right?
         kLoc = keyList.index(self.getSelectedItem(), startLookingAt)
         displayKeys = keyList[kLoc-1:kLoc+self._windowSize-1]
+
+        # something is wrong here, I think. Works now. Broke with windowSize 3?
         for i in range(self._windowSize):
+            # print(f" item {i} key: {displayKeys[i]}")
             self._display.setTextAreaN(i, f"{displayKeys[i]} = {self.getItemOption(displayKeys[i])}")
 
 
