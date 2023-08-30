@@ -1,7 +1,6 @@
 import board
 import digitalio as feather_digitalio
 import gc
-import supervisor
 
 
 #############################################################3
@@ -34,8 +33,8 @@ else:
     import feathereminDisplay2 as fDisplay
 
 
-def showI2Cbus():
-    i2c = board.I2C()
+def showI2Cbus(i2c):
+    # i2c = board.I2C()
     if i2c.try_lock():
         print(f"I2C addresses found: {[hex(x) for x in i2c.scan()]}")
         i2c.unlock()
@@ -86,16 +85,16 @@ class FeatereminHardware:
 #                             neopixel.NeoPixel            # neopixel in rotary encoder
 #                             ]:
 
-        i2c = None
+        self._i2c = None
         # Easist way to init I2C on a Feather:
         try:
-            i2c = board.STEMMA_I2C()
+            self._i2c = board.STEMMA_I2C()
         except:
             print("board.STEMMA_I2C failed! Is the Stemma bus connected? It would seem not.")
             # return tuple()
 
         # For fun
-        showI2Cbus()
+        showI2Cbus(self._i2c)
 
         # ----------------- Our display object - do this early so we can show errors?
         if USE_SIMPLE_DISPLAY:
@@ -120,7 +119,7 @@ class FeatereminHardware:
         self._L0X_A_reset.value = False
 
         # 'A' VL53L0X sensor is now turned off
-        showI2Cbus()
+        showI2Cbus(self._i2c)
 
 
         # ----------------- 'B' VL53L0X time-of-flight sensor
@@ -128,13 +127,13 @@ class FeatereminHardware:
         # First, see if it's there already with the non-default address (left over from a previous run).
         # If so, we don't need to re-assign it.
         try:
-            self._L0X_B = adafruit_vl53l0x.VL53L0X(i2c, address=L0X_B_ALTERNATE_I2C_ADDR)
+            self._L0X_B = adafruit_vl53l0x.VL53L0X(self._i2c, address=L0X_B_ALTERNATE_I2C_ADDR)
             print(f"Found 'B' VL53L0X at {hex(L0X_B_ALTERNATE_I2C_ADDR)}; OK")
         except:
             print(f"Did not find 'B' VL53L0X at {hex(L0X_B_ALTERNATE_I2C_ADDR)}, trying default....")
             try:
                 # Try at the default address
-                self._L0X_B = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
+                self._L0X_B = adafruit_vl53l0x.VL53L0X(self._i2c)  # also performs VL53L0X hardware check
                 print(f"Found 'B' VL53L0X at default address; setting to {hex(L0X_B_ALTERNATE_I2C_ADDR)}...")
                 self._L0X_B.set_address(L0X_B_ALTERNATE_I2C_ADDR)  # address assigned should NOT be already in use
                 print("VL53L0X 'B' set_address OK")
@@ -161,7 +160,7 @@ class FeatereminHardware:
 
         self._L0X_A = None
         try:
-            self._L0X_A = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
+            self._L0X_A = adafruit_vl53l0x.VL53L0X(self._i2c)  # also performs VL53L0X hardware check
 
             # Set params for the sensor
             self._L0X_A.measurement_timing_budget = 33000
@@ -171,13 +170,13 @@ class FeatereminHardware:
             print("**** No 'A' VL53L0X? Continuing....")
 
         # Show bus again?
-        showI2Cbus()
+        showI2Cbus(self._i2c)
 
 
         # ----------------- APDS9960 gesture/proximity/color sensor
         self._apds = None
         try:
-            self._apds = APDS9960(i2c)
+            self._apds = APDS9960(self._i2c)
             self._apds.enable_proximity = True
             self._apds.enable_gesture = True
             self._apds.rotation = 90
@@ -190,7 +189,7 @@ class FeatereminHardware:
         # # TODO: merge this into the Synth object? Or at least hand it to that object to use?
         # amp = None
         # # try:
-        # #     amp = adafruit_max9744.MAX9744(i2c)
+        # #     amp = adafruit_max9744.MAX9744(self._i2c)
         # #     amp.volume = INITIAL_20W_AMP_VOLUME
         # #     print("MAX9744 amp init OK")
         # # except Exception as e:
@@ -200,7 +199,7 @@ class FeatereminHardware:
         # # ------------------ Rotary encoder
         # encoder, wheel_button, pixel = None, None, None
         # # try:
-        # #     ss = seesaw.Seesaw(i2c, addr=ROTARY_ENCODER_I2C_ADDR)
+        # #     ss = seesaw.Seesaw(self._i2c, addr=ROTARY_ENCODER_I2C_ADDR)
         # #     seesaw_v = (ss.get_version() >> 16) & 0xFFFF
         # #     # print(f"Found product {seesaw_v}")
         # #     if seesaw_v != 4991:
@@ -245,6 +244,9 @@ class FeatereminHardware:
     def __del__(self):
         ''' Destructor
         '''
+
+        # release the I2C bus
+        self._i2c.deinit()
 
         # release the hardware pin
         self._L0X_A_reset.deinit()

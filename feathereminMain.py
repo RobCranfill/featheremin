@@ -1,18 +1,28 @@
-"""Make noises, based on various sensors including time-of-flight.
-    robcranfill@gmail.com
+""" Make noises, based on two LiDAR time-of-flight sensors.
+
+
 """
+__author__      = "Rob Cranfill"
+__copyright__   = "Copyright 2023, Rob Cranfill"
+__credits__     = ["Rob Cranfill", "@todbot"]
+__license__     = "GPL"
+__maintainer__  = "Rob Cranfill"
+__email__       = "robcranfill@gmail.com"
+__status__      = "Prototype"
 
 # Standard libs
 import array
 import audiocore
 import board
 import busio
-import digitalio as feather_digitalio
 import gc
 import math
 import time
 import supervisor
 import sys
+
+# 3rd party libs
+import digitalio as feather_digitalio
 
 # Our modules
 import feathereminHardware
