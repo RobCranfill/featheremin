@@ -1,13 +1,7 @@
-import array
-import audiocore
 import board
-import busio
 import digitalio as feather_digitalio
 import gc
-import math
-import time
 import supervisor
-import sys
 
 
 #############################################################3
@@ -18,27 +12,29 @@ import sys
 
 # Adafruit hardware libraries - www.adafruit.com
 import adafruit_vl53l0x
-import adafruit_max9744
 from adafruit_apds9960.apds9960 import APDS9960
-from adafruit_seesaw import seesaw, rotaryio, digitalio, neopixel
-
-# # Other Featheremin modules
-# import featherSynth5 as fSynth
-# import gestureMenu
+# import adafruit_max9744
+# from adafruit_seesaw import seesaw, rotaryio, digitalio, neopixel
 
 
 # GPIO pins used:
-# The GPIO pin we use to turn the 'primary' ("A") ToF sensor off,
-# so we can re-program the address of the secondary one.
+# The GPIO pin we use to turn the 'A' ToF sensor off,
+# so we can re-program the address of the 'B' sensor.
+#
 L0X_A_RESET_OUT = board.D4
-
 
 TFT_DISPLAY_CS    = board.A2
 TFT_DISPLAY_DC    = board.A0
 TFT_DISPLAY_RESET = board.A1
 
+
 # The L0X defaults to I2C 0x29; we have two, one of which we will re-assign to this address.
 L0X_B_ALTERNATE_I2C_ADDR = 0x30
+
+# ROTARY_ENCODER_I2C_ADDR = 0x36
+# SEE_SAW_BUTTON_PIN_WTF = 24  # FIXME: wtf is this magic number?
+# INITIAL_20W_AMP_VOLUME = 10 # 25 is max for 20W amp and 3W 4 ohm speaker with 12v to amp.
+
 
 # LCD display
 USE_SIMPLE_DISPLAY = True
@@ -46,10 +42,6 @@ if USE_SIMPLE_DISPLAY:
     import feathereminDisplay3 as fDisplay
 else:
     import feathereminDisplay2 as fDisplay
-
-# ROTARY_ENCODER_I2C_ADDR = 0x36
-# SEE_SAW_BUTTON_PIN_WTF = 24  # FIXME: wtf is this magic number?
-# INITIAL_20W_AMP_VOLUME = 10 # 25 is max for 20W amp and 3W 4 ohm speaker with 12v to amp.
 
 
 def showI2Cbus():
@@ -90,6 +82,7 @@ class FeatereminHardware:
 
         # supervisor.reload()
 
+        i2c = None
         # Easist way to init I2C on a Feather:
         try:
             i2c = board.STEMMA_I2C()
@@ -109,14 +102,14 @@ class FeatereminHardware:
         print("Display init OK")
 
 
-        # ----------------- 'Primary' VL53L0X time-of-flight sensor
-        # 'Primary' ToF - this has its XSHUT pin wired to GPIO {L0X_A_RESET_OUT}.
+        # ----------------- 'A' VL53L0X time-of-flight sensor
+        # 'A' ToF - this has its XSHUT pin wired to GPIO {L0X_A_RESET_OUT}.
         # We will finish setting this sensor up 
-        # *after* we turn it off and init the 'secondary' ToF sensor.
+        # *after* we turn it off and init the 'B' ToF sensor.
         
         # Turn off this ToF sensor - take XSHUT pin low.
         #
-        print("Turning off 'primary' VL53L0X...")
+        print("Turning off 'A' VL53L0X...")
         L0X_A_reset = feather_digitalio.DigitalInOut(L0X_A_RESET_OUT)
         L0X_A_reset.direction = feather_digitalio.Direction.OUTPUT
         L0X_A_reset.value = False
@@ -125,21 +118,21 @@ class FeatereminHardware:
         showI2Cbus()
 
 
-        # ----------------- 'Secondary' VL53L0X time-of-flight sensor
-        # 'Secondary' ToF - the one DIDN'T wire the XSHUT pin to.
+        # ----------------- 'B' VL53L0X time-of-flight sensor
+        # 'B' ToF - the one DIDN'T wire the XSHUT pin to.
         # First, see if it's there already with the non-default address (left over from a previous run).
         # If so, we don't need to re-assign it.
         try:
             self._L0X_B = adafruit_vl53l0x.VL53L0X(i2c, address=L0X_B_ALTERNATE_I2C_ADDR)
-            print(f"Found secondary VL53L0X at {hex(L0X_B_ALTERNATE_I2C_ADDR)}; OK")
+            print(f"Found 'B' VL53L0X at {hex(L0X_B_ALTERNATE_I2C_ADDR)}; OK")
         except:
-            print(f"Did not find secondary VL53L0X at {hex(L0X_B_ALTERNATE_I2C_ADDR)}, trying default....")
+            print(f"Did not find 'B' VL53L0X at {hex(L0X_B_ALTERNATE_I2C_ADDR)}, trying default....")
             try:
                 # Try at the default address
                 self._L0X_B = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
-                print(f"Found VL53L0X at default address; setting to {hex(L0X_B_ALTERNATE_I2C_ADDR)}...")
+                print(f"Found 'B' VL53L0X at default address; setting to {hex(L0X_B_ALTERNATE_I2C_ADDR)}...")
                 self._L0X_B.set_address(L0X_B_ALTERNATE_I2C_ADDR)  # address assigned should NOT be already in use
-                print("VL53L0X set_address OK")
+                print("VL53L0X 'B' set_address OK")
 
                 # Set params for the sensor?
                 # # The default timing budget is 33ms, a good compromise of speed and accuracy.
@@ -148,25 +141,25 @@ class FeatereminHardware:
                 # # Or a slower but more accurate timing budget of 200ms:
                 # L0X_B.measurement_timing_budget = 200000
 
-                print("Secondary VL53L0X init OK")
+                print("'B' VL53L0X init OK")
             except Exception as e:
                 print(f"**** Caught exception: {e}")
-                print("**** No secondary VL53L0X?")
+                print("**** No 'B' VL53L0X?")
                 self._L0X_B = None
 
 
         # ----------------- VL53L0X time-of-flight sensor, part 2
         # Turn L0X back on and instantiate its object
-        print("Turning 'primary' VL53L0X back on...")
+        print("Turning 'A' VL53L0X back on...")
         L0X_A_reset.value = True
         self._L0X_A = None
         try:
             self._L0X_A = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
             # Set params for the sensor?
 
-            print("'Primary' VL53L0X init OK")
+            print("'A' VL53L0X init OK")
         except:
-            print("**** No primary VL53L0X? Continuing....")
+            print("**** No 'A' VL53L0X? Continuing....")
 
         # Show bus again?
         showI2Cbus()
@@ -227,17 +220,14 @@ class FeatereminHardware:
         print("init_hardware OK!")
         print("")
 
-        # return L0X_A, L0X_B, apds, display, amp, encoder, wheel_button, pixel
-        
         # end __init__
 
 
-    def getHardwareItems(self): # ->
-                    # tuple[
-                    #     adafruit_vl53l0x.VL53L0X,   # 'A' ToF sensor
-                    #     adafruit_vl53l0x.VL53L0X,    # 'B' ToF sensor
-                    #     APDS9960,                    # gesture sensor
-                    #     fDisplay.FeathereminDisplay  # our display object
-                    #     ]:
-    
+    def getHardwareItems(self) -> Tuple[
+                        adafruit_vl53l0x.VL53L0X,       # 'A' ToF sensor
+                        adafruit_vl53l0x.VL53L0X,       # 'B' ToF sensor
+                        APDS9960,                       # gesture sensor
+                        fDisplay.FeathereminDisplay     # our display object
+                        ]:
+
         return self._L0X_A, self._L0X_B, self._apds, self._display

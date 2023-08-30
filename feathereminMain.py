@@ -1,6 +1,8 @@
 """Make noises, based on various sensors including time-of-flight.
     robcranfill@gmail.com
 """
+
+# Standard libs
 import array
 import audiocore
 import board
@@ -12,6 +14,11 @@ import time
 import supervisor
 import sys
 
+# Our modules
+import feathereminHardware
+import featherSynth5 as fSynth
+import gestureMenu
+
 
 #############################################################3
 # Things to do
@@ -19,19 +26,7 @@ import sys
 # Do we need to 'deinit' things? Which things?? Might not be a bad idea!
 # Such as the GPIOs, display, sensors
 
-
-# Adafruit hardware libraries - www.adafruit.com
-import adafruit_vl53l0x
-import adafruit_max9744
-from adafruit_apds9960.apds9960 import APDS9960
-from adafruit_seesaw import seesaw, rotaryio, digitalio, neopixel
-
-# Other Featheremin modules
-import feathereminHardware
-import featherSynth5 as fSynth
-import gestureMenu
-
-
+# GPIO pins used - FIXME: should be in h/w module?
 # for I2S audio out
 # TODO: this should be in Hardware object?
 AUDIO_OUT_I2S_BIT  = board.D9
@@ -176,7 +171,6 @@ def main():
 
     showMem()
 
-    #
     # ==== Main loop ===============================================================
     #
     while True:
@@ -193,7 +187,7 @@ def main():
 
                 displayLeftStatus(display, waveName, lfoMode)
 
-                # FIXME: a better way to do this?
+                # FIXME: find a better way to do this
                 if waveIndex == 0:
                     synth.setWaveformSquare()
                 elif waveIndex == 1:
@@ -209,6 +203,7 @@ def main():
 
                 displayLeftStatus(display, waveName, lfoMode)
 
+                # FIXME: find a better way to do this
                 if lfoIndex == 0:
                     synth.clearTremolo()
                     synth.clearVibrato()
@@ -225,7 +220,7 @@ def main():
                     synth.startDrone(1000, 1100)
 
 
-        # Make some noise!
+        # C'mon - make some noise!
 
         # Get the two ranges, as available. 
         #
