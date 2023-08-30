@@ -26,9 +26,20 @@ import gestureMenu
 # Do we need to 'deinit' things? Which things?? Might not be a bad idea!
 # Such as the GPIOs, display, sensors
 
-# GPIO pins used - FIXME: should be in h/w module?
+
+# GPIO pins used:
+
 # for I2S audio out
-# TODO: this should be in Hardware object?
+
+# The GPIO pin we use to turn the 'A' ToF sensor off,
+# so we can re-program the address of the 'B' sensor.
+#
+L0X_A_RESET_OUT = board.D4
+
+TFT_DISPLAY_CS    = board.A2
+TFT_DISPLAY_DC    = board.A0
+TFT_DISPLAY_RESET = board.A1
+
 AUDIO_OUT_I2S_BIT  = board.D9
 AUDIO_OUT_I2S_WORD = board.D10
 AUDIO_OUT_I2S_DATA = board.D11
@@ -88,7 +99,7 @@ def map_and_scale(inValue, lowIn, highIn, lowOut, highOut):
 
 '''
     An error handler for major errors, like hardware init issues.
-    Perhaps flash an LED (which one? - the ones on the Feather are inside the case now!)
+    Perhaps flash an LED (which? - the ones on the Feather are inside the case now!)
 '''
 def showFatalErrorAndHalt(errorMessage: str):
     print(f"\n\nFATAL ERROR: {errorMessage}\nStopping.\n")
@@ -110,7 +121,11 @@ def main():
 
 
     # Initialize the hardware.
-    hw_wrapper = feathereminHardware.FeatereminHardware()
+    hw_wrapper = feathereminHardware.FeatereminHardware(
+                    TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET,
+                    AUDIO_OUT_I2S_BIT, AUDIO_OUT_I2S_WORD, AUDIO_OUT_I2S_DATA,
+                    L0X_A_RESET_OUT)
+
     tof_A, tof_B, gestureSensor, display = hw_wrapper.getHardwareItems()
 
     # What missing hardware can we tolerate?
@@ -134,9 +149,9 @@ def main():
     # My "synthezier" object that does the stuff that I need.
     #
     synth = fSynth.FeatherSynth(USE_STEREO,
-                                i2s_bit_clock=AUDIO_OUT_I2S_BIT, 
-                                i2s_word_select=AUDIO_OUT_I2S_WORD, 
-                                i2s_data=AUDIO_OUT_I2S_DATA)
+                                i2s_bit_clock = AUDIO_OUT_I2S_BIT, 
+                                i2s_word_select = AUDIO_OUT_I2S_WORD, 
+                                i2s_data = AUDIO_OUT_I2S_DATA)
     synth.setVolume(0.75)
 
 
@@ -158,7 +173,7 @@ def main():
 
     # Play notes from a chromatic scale, as opposed to a continuous range of frequencies?
     # That is, integer MIDI numbers .vs. fractional.
-    chromatic = True
+    chromatic = False # more thereminy!
     # displayChromaticMode(display, chromatic)
 
     # Instructions here?
@@ -221,6 +236,8 @@ def main():
 
 
         # C'mon - make some noise!
+
+# TODO: display frequency!
 
         # Get the two ranges, as available. 
         #

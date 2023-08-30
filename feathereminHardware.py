@@ -9,23 +9,13 @@ import supervisor
 ##############
 # Do we need to 'deinit' things? Which things?? Might not be a bad idea!
 # Such as the GPIOs, display, sensors
+# See '__del__' method below.
 
 # Adafruit hardware libraries - www.adafruit.com
 import adafruit_vl53l0x
 from adafruit_apds9960.apds9960 import APDS9960
 # import adafruit_max9744
 # from adafruit_seesaw import seesaw, rotaryio, digitalio, neopixel
-
-
-# GPIO pins used:
-# The GPIO pin we use to turn the 'A' ToF sensor off,
-# so we can re-program the address of the 'B' sensor.
-#
-L0X_A_RESET_OUT = board.D4
-
-TFT_DISPLAY_CS    = board.A2
-TFT_DISPLAY_DC    = board.A0
-TFT_DISPLAY_RESET = board.A1
 
 
 # The L0X defaults to I2C 0x29; we have two, one of which we will re-assign to this address.
@@ -66,7 +56,24 @@ class FeatereminHardware:
         list of objects: the various hardware items initialized.
     """
 
-    def __init__(self):
+    # TODO: use named params?
+    # TODO: init the audio hardware too (those params are unused so far)
+
+    def __init__(self,
+                display_cs_pin, display_dc_pin, display_reset_pin,
+                audio_out_i2s_bit_pin, audio_out_i2s_word_pin, audio_out_i2s_data_pin,
+                l0x_a_reset_out_pin
+                ):
+
+        # we don't really need these instance vars?
+
+        # self._display_cs_pin = display_cs_pin
+        # self._display_dc_pin = display_dc_pin
+        # self._display_reset_pin = display_reset_pin
+        # self._audio_out_i2s_bit_pin = audio_out_i2s_bit_pin
+        # self._audio_out_i2s_word_pin = audio_out_i2s_word_pin
+        # self._audio_out_i2s_data_pin = audio_out_i2s_data_pin
+        # self._l0x_a_reset_out_pin = l0x_a_reset_out_pin
 
 # was:
 # def init_hardware() -> tuple[adafruit_vl53l0x.VL53L0X,   # 'A' ToF sensor
@@ -79,9 +86,6 @@ class FeatereminHardware:
 #                             neopixel.NeoPixel            # neopixel in rotary encoder
 #                             ]:
 
-
-        # supervisor.reload()
-
         i2c = None
         # Easist way to init I2C on a Feather:
         try:
@@ -93,12 +97,11 @@ class FeatereminHardware:
         # For fun
         showI2Cbus()
 
-        if USE_SIMPLE_DISPLAY:
         # ----------------- Our display object - do this early so we can show errors?
-            self._display = fDisplay.FeathereminDisplay(180, TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET, 4)
+        if USE_SIMPLE_DISPLAY:
+            self._display = fDisplay.FeathereminDisplay(180, display_cs_pin, display_dc_pin, display_reset_pin, 4)
         else:
-            self._display = fDisplay.FeathereminDisplay(180, False, TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET)
-
+            self._display = fDisplay.FeathereminDisplay(180, False, display_cs_pin, display_dc_pin, display_reset_pin)
         print("Display init OK")
 
 
@@ -110,16 +113,18 @@ class FeatereminHardware:
         # Turn off this ToF sensor - take XSHUT pin low.
         #
         print("Turning off 'A' VL53L0X...")
-        L0X_A_reset = feather_digitalio.DigitalInOut(L0X_A_RESET_OUT)
-        L0X_A_reset.direction = feather_digitalio.Direction.OUTPUT
-        L0X_A_reset.value = False
 
-        # Prmary VL53L0X sensor is now turned off
+        # We keep this as an instance var so we can de-init it later.
+        self._L0X_A_reset = feather_digitalio.DigitalInOut(l0x_a_reset_out_pin)
+        self._L0X_A_reset.direction = feather_digitalio.Direction.OUTPUT
+        self._L0X_A_reset.value = False
+
+        # 'A' VL53L0X sensor is now turned off
         showI2Cbus()
 
 
         # ----------------- 'B' VL53L0X time-of-flight sensor
-        # 'B' ToF - the one DIDN'T wire the XSHUT pin to.
+        # 'B' ToF - the one that *doesn't* have its XSHUT pin wired up, so is always 'on'.
         # First, see if it's there already with the non-default address (left over from a previous run).
         # If so, we don't need to re-assign it.
         try:
@@ -134,12 +139,13 @@ class FeatereminHardware:
                 self._L0X_B.set_address(L0X_B_ALTERNATE_I2C_ADDR)  # address assigned should NOT be already in use
                 print("VL53L0X 'B' set_address OK")
 
-                # Set params for the sensor?
-                # # The default timing budget is 33ms, a good compromise of speed and accuracy.
-                # # For example a higher speed but less accurate timing budget of 20ms:
-                # L0X_B.measurement_timing_budget = 20000
-                # # Or a slower but more accurate timing budget of 200ms:
-                # L0X_B.measurement_timing_budget = 200000
+                # Set params for the sensor
+                # The default timing budget is 33ms (measurement_timing_budget = 33000),
+                # a good compromise of speed and accuracy.
+                # For example, a higher speed but less accurate timing budget of 20ms (20000),
+                # or a slower but more accurate timing budget of 200ms (2000)
+                #
+                self._L0X_B.measurement_timing_budget = 33000
 
                 print("'B' VL53L0X init OK")
             except Exception as e:
@@ -151,11 +157,14 @@ class FeatereminHardware:
         # ----------------- VL53L0X time-of-flight sensor, part 2
         # Turn L0X back on and instantiate its object
         print("Turning 'A' VL53L0X back on...")
-        L0X_A_reset.value = True
+        self._L0X_A_reset.value = True
+
         self._L0X_A = None
         try:
             self._L0X_A = adafruit_vl53l0x.VL53L0X(i2c)  # also performs VL53L0X hardware check
-            # Set params for the sensor?
+
+            # Set params for the sensor
+            self._L0X_A.measurement_timing_budget = 33000
 
             print("'A' VL53L0X init OK")
         except:
@@ -231,3 +240,17 @@ class FeatereminHardware:
                         ]:
 
         return self._L0X_A, self._L0X_B, self._apds, self._display
+
+
+    def __del__(self):
+        ''' Destructor
+        '''
+
+        # release the hardware pin
+        self._L0X_A_reset.deinit()
+
+        self._L0X_A = None
+        self._L0X_B = None
+        self._apds = None
+        self._display = None
+        print("\nHardware object destroyed!\n")
