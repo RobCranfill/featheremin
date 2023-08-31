@@ -1,3 +1,9 @@
+"""Object to wrap our various hardware sensors and effectors.
+
+The constructor of this object does the work, 
+then returns nothing (as constructors are constrained to do).
+To get a tuple of the various devices, call the getHardwareItems() instance method.
+"""
 import board
 import gc
 
@@ -57,13 +63,15 @@ class FeatereminHardware:
                 l0x_a_reset_out_pin
                 ):
 
+        self._intOK = True
+
         # Easist way to init I2C on a Feather
         self._i2c = None
         try:
             self._i2c = board.STEMMA_I2C()
         except:
             print("board.STEMMA_I2C failed! Is the Stemma bus connected? It would seem not.")
-            # return tuple() # fail fast?
+            self._intOK = False
 
         # For fun
         showI2Cbus(self._i2c)
@@ -123,7 +131,7 @@ class FeatereminHardware:
                 print(f"**** Caught exception: {e}")
                 print("**** No 'B' VL53L0X?")
                 self._L0X_B = None
-
+                self._intOK = False
 
         # ----------------- VL53L0X time-of-flight sensor, part 2
         # Turn L0X back on and instantiate its object
@@ -140,6 +148,7 @@ class FeatereminHardware:
             print("'A' VL53L0X init OK")
         except:
             print("**** No 'A' VL53L0X? Continuing....")
+            self._intOK = False
 
         # Show bus again?
         showI2Cbus(self._i2c)
@@ -155,7 +164,7 @@ class FeatereminHardware:
             print("APDS9960 init OK")
         except:
             print("**** No APDS9960? Continuing....")
-
+            self._intOK = False
 
         # My "synthezier" object that does the stuff that I need.
         #
@@ -169,7 +178,7 @@ class FeatereminHardware:
 
         showMem()
         print("")
-        print("init_hardware OK!")
+        print("init_hardware OK? {self._intOK}")
         print("")
 
         # end __init__
@@ -181,10 +190,11 @@ class FeatereminHardware:
                         APDS9960,                       # gesture sensor
                         fDisplay.FeathereminDisplay,    # our display object
                         fSynth.FeatherSynth             # our synth thingy
-                        ]:
+                        ] :
         '''
         Return a tuple of all the hardare objects.
-
+        
+        Check self._initOK before using (or check each item.)
         '''
         return self._L0X_A, self._L0X_B, self._apds, self._display, self._synth
 

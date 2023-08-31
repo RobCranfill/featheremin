@@ -1,10 +1,11 @@
-# A synthio-based implementation of FeatherSynth.
-# Uses an I2S amplifier instead of simple PWM.
-#
-# TODO: Use "detuning" to get a fatter sound?
-#
-# For the Featheremin project - https://github.com/RobCranfill/featheremin
-#
+"""A synthio-based implementation of FeatherSynth.
+
+Uses an I2S amplifier instead of simple PWM.
+
+TODO: Use "detuning" to get a fatter sound?
+
+For the Featheremin project - https://github.com/RobCranfill/featheremin
+"""
 import audiobusio
 import audiomixer
 import board
@@ -19,14 +20,14 @@ SYNTH_RATE    = 22050
 SAMPLE_RATE   = 28000
 SAMPLE_SIZE   =   512
 SAMPLE_VOLUME = 32000
-BUFFER_SIZE   =  1024 * 16 # up from 2K; definitely reduces I/O noise.
+BUFFER_SIZE   =  1024 * 16 # 12K didn't seem sufficient; 16K definitely reduced I/O noise.
 
 # A do-nothing 'BlockInput' for the LFOs
 LFO_NONE = 1.0
 
 class FeatherSynth:
     '''
-        Our new synthio-based synth.
+        A synthio-based noisemaking object.
 
         Can change waveform, TODO: envelope, and add tremolo or vibrato.
 

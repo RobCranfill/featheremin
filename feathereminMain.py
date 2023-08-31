@@ -1,14 +1,16 @@
 """ Make noises, based on two LiDAR time-of-flight sensors.
 
-
+    For CircuitPython, using the ultracool 'synthio' package.
+    Build mostly (entirely?) with Adafruit components!
+    See https://github.com/RobCranfill/featheremin
 """
 __author__      = "Rob Cranfill"
-__copyright__   = "Copyright 2023, Rob Cranfill"
+__copyright__   = "Copyright 2023 Rob Cranfill"
 __credits__     = ["Rob Cranfill", "@todbot"]
 __license__     = "GPL"
 __maintainer__  = "Rob Cranfill"
-__email__       = "robcranfill@gmail.com"
-__status__      = "Prototype"
+__email__       = "<robcranfill at gmail.com>"
+__status__      = "Development"
 
 # Standard libs
 import array
@@ -38,22 +40,22 @@ import gestureMenu
 # Such as the GPIOs, display, sensors
 
 
-# GPIO pins used:
-
-# for I2S audio out
-
+# GPIO pins used
+#
 # The GPIO pin we use to turn the 'A' ToF sensor off,
 # so we can re-program the address of the 'B' sensor.
 #
 L0X_A_RESET_OUT = board.D4
 
+# The TFT display, attached via the SPI ("four wire") interface
 TFT_DISPLAY_CS    = board.A2
 TFT_DISPLAY_DC    = board.A0
 TFT_DISPLAY_RESET = board.A1
 
+# for I2S audio out
 AUDIO_OUT_I2S_BIT  = board.D9
-AUDIO_OUT_I2S_WORD = board.D10
 AUDIO_OUT_I2S_DATA = board.D11
+AUDIO_OUT_I2S_WORD = board.D10
 
 
 # in work
@@ -72,7 +74,7 @@ menuData = [ # 'item', 'options', and TODO: index - or value? - of default
             [MENU_LFO,     LFO_MODES, 0],
             ["Chromatic",   [True, False], 0],
             ["Bogus 1",     ["A", "B", "C"], 0],
-            ["Bogus 2",     ["A", "B", "C"], 1]
+            ["Bogus 2",     ["A", "B", "C"], 1],
             # ["Delay",       [0, 1, 2, 3, 4, 5], 0],
             # ["Volume",      ["20", 40, 60, 80, 100], 4],
             ]
@@ -81,6 +83,9 @@ menuData = [ # 'item', 'options', and TODO: index - or value? - of default
 def showMem():
     gc.collect()
     print(f"Free memory: {gc.mem_free()}")
+
+
+# FIXME: Eventually these displayXXX methods should be moved into the display oject.
 
 def displayLeftStatus(disp, wave, lfo):
     disp.setTextAreaL(f"{wave}\n{lfo}")
@@ -97,7 +102,6 @@ def displayDroneMode(disp, freq1, freq2):
 def displayMainFreq(disp, fString):
     disp.setTextAreaR(fString)
 
-
 # def displayChromaticMode(disp, chromaticFlag):
 #     disp.setTextAreaL("Chromatic" if chromaticFlag else "Continuous")
 #
@@ -105,24 +109,19 @@ def displayMainFreq(disp, fString):
 #     disp.setTextArea2(f"Sleep: {sleepMS} ms")
 
 
-'''
- Restrict the input number to the given range.
-'''
 def clamp(num, min_value, max_value):
-   return max(min(num, max_value), min_value)
+    '''Restrict the input number to the given range.'''
+    return max(min(num, max_value), min_value)
 
-'''
-    Map the input number's position in the input range to the output range.
-'''
 def map_and_scale(inValue, lowIn, highIn, lowOut, highOut):
+    ''' Map the input number's position in the input range to the output range.'''
     frac = (inValue-lowIn)/(highIn-lowIn)
     return lowOut + frac*(highOut-lowOut)
 
-'''
-    An error handler for major errors, like hardware init issues.
-    Perhaps flash an LED (which? - the ones on the Feather are inside the case now!)
-'''
-def showFatalErrorAndHalt(errorMessage: str):
+def showFatalErrorAndHalt(errorMessage: str) -> None:
+    '''An error handler for major errors, like hardware init issues.
+
+    Perhaps flash an LED (which? - the ones on the Feather are inside the case now!)'''
     print(f"\n\nFATAL ERROR: {errorMessage}\nStopping.\n")
     while True:
         pass
@@ -135,7 +134,8 @@ def main():
     print("\nHello, Featheremin!\n")
     showMem()
 
-    # turn off auto-reload?
+    # turn off auto-reload; the auto-reload scanning seems to generate audio noise in synthio.
+    # FIXME: Is this still true? Even with new versions of syntio? Even with a big buffer?
     import supervisor
     supervisor.runtime.autoreload = False  # CirPy 8 and above
     print("supervisor.runtime.autoreload = False")
@@ -146,7 +146,10 @@ def main():
             TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET,
             AUDIO_OUT_I2S_BIT, AUDIO_OUT_I2S_WORD, AUDIO_OUT_I2S_DATA,
             L0X_A_RESET_OUT)
-
+    
+    # could do this:
+    # if not hw._intOK:
+    #   ...
     tof_A, tof_B, gestureSensor, display, synth = hw.getHardwareItems()
 
     # What missing hardware can we tolerate?
@@ -154,17 +157,11 @@ def main():
     # Check only for the two really, really required things?
     # if tof_A is None or display is None:
     #
-    # Check for anything missing?
-    # if None in (tof_A, tof_B, gestureSensor, display, amp, wheel, wheelButton, wheelLED):
-    #
-    # No MAX9744 amp is always OK
-    # if None in (tof_A, tof_B, gestureSensor, display, wheel, wheelButton, wheelLED):
-
     if None in (tof_A, tof_B, gestureSensor, display, synth):
         print("")
-        print("Necessary hardware not found.\n")
-        print(f"ToF A: {tof_A}\nToF B: {tof_B}\nGest: {gestureSensor}\nDisp: {display}")
-        # print(f"(Amp: {amp}\nWheel: {wheel}\nButt: {wheelButton}\nLED: {wheelLED})")
+        print("Some necessary hardware not found:\n")
+        print(f" ToF A: {tof_A}\n ToF B: {tof_B}\n Gest: {gestureSensor}\n Disp: {display}\n Synth: {synth}")
+        # print(f" Amp: {amp}\n Wheel: {wheel}\n Butt: {wheelButton}\n LED: {wheelLED}")
         return
 
 
@@ -180,8 +177,9 @@ def main():
     dSleepMilliseconds = 0
 
     # Play notes from a chromatic scale, as opposed to a continuous range of frequencies?
-    # That is, integer MIDI numbers .vs. fractional.
-    chromatic = False # more thereminy!
+    # That is, use only integer MIDI numbers .vs. fractional?
+    # False is more thereminy!
+    chromatic = False
     # displayChromaticMode(display, chromatic)
 
     # Instructions here?
@@ -199,7 +197,7 @@ def main():
         #
         item, option = gmenu.getItemAndOption()
         if item is not None:
-            print(f"Gesture event: '{item}' / '{option}'")
+            # print(f"Gesture event: '{item}' / '{option}'")
             if item == MENU_WAVE:
                 waveName = option
                 waveIndex = WAVEFORM_TYPES.index(waveName)
