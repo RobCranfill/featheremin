@@ -301,7 +301,7 @@ def main():
             if chromatic:
                 midiNote = int(midiNote)
 
-            print(f"{r1}mm -> MIDI {midiNote} -> {synthio.midi_to_hz(midiNote)}")
+            # print(f"{r1}mm -> MIDI {midiNote} -> {synthio.midi_to_hz(midiNote)}")
             # display.setTextAreaR(f"r1={r1}\nr2={r2}")
 
             displayMainFreq(display, f"{synthio.midi_to_hz(midiNote):4.2f} Hz")

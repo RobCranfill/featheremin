@@ -19,7 +19,7 @@ SYNTH_RATE    = 22050
 SAMPLE_RATE   = 28000
 SAMPLE_SIZE   =   512
 SAMPLE_VOLUME = 32000
-BUFFER_SIZE   =  4096 # up from 2K, does this help the SPI noise?
+BUFFER_SIZE   =  1024 * 16 # up from 2K; definitely reduces I/O noise.
 
 # A do-nothing 'BlockInput' for the LFOs
 LFO_NONE = 1.0
