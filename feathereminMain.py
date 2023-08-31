@@ -21,8 +21,9 @@ import time
 import supervisor
 import sys
 
-# 3rd party libs
+# 3rd party libs (Adafruit!)
 import digitalio as feather_digitalio
+import synthio
 
 # Our modules
 import feathereminHardware
@@ -84,8 +85,18 @@ def showMem():
 def displayLeftStatus(disp, wave, lfo):
     disp.setTextAreaL(f"{wave}\n{lfo}")
 
+# def displayRightStatus(disp, freq):
+#     disp.setTextAreaR(f"{freq:6.0f}")
+
 def displayLFOMode(disp, mode):
     disp.setTextAreaR(mode)
+
+def displayDroneMode(disp, freq1, freq2):
+    disp.setTextAreaR(f"{freq1:4.2f} / {freq2:4.2f}")
+
+def displayMainFreq(disp, fString):
+    disp.setTextAreaR(fString)
+
 
 # def displayChromaticMode(disp, chromaticFlag):
 #     disp.setTextAreaL("Chromatic" if chromaticFlag else "Continuous")
@@ -131,12 +142,12 @@ def main():
 
 
     # Initialize the hardware.
-    hw_wrapper = feathereminHardware.FeatereminHardware(
-                    TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET,
-                    AUDIO_OUT_I2S_BIT, AUDIO_OUT_I2S_WORD, AUDIO_OUT_I2S_DATA,
-                    L0X_A_RESET_OUT)
+    hw = feathereminHardware.FeatereminHardware(
+            TFT_DISPLAY_CS, TFT_DISPLAY_DC, TFT_DISPLAY_RESET,
+            AUDIO_OUT_I2S_BIT, AUDIO_OUT_I2S_WORD, AUDIO_OUT_I2S_DATA,
+            L0X_A_RESET_OUT)
 
-    tof_A, tof_B, gestureSensor, display = hw_wrapper.getHardwareItems()
+    tof_A, tof_B, gestureSensor, display, synth = hw.getHardwareItems()
 
     # What missing hardware can we tolerate?
     #####
@@ -149,20 +160,12 @@ def main():
     # No MAX9744 amp is always OK
     # if None in (tof_A, tof_B, gestureSensor, display, wheel, wheelButton, wheelLED):
 
-    if None in (tof_A, tof_B, gestureSensor, display):
+    if None in (tof_A, tof_B, gestureSensor, display, synth):
         print("")
         print("Necessary hardware not found.\n")
         print(f"ToF A: {tof_A}\nToF B: {tof_B}\nGest: {gestureSensor}\nDisp: {display}")
         # print(f"(Amp: {amp}\nWheel: {wheel}\nButt: {wheelButton}\nLED: {wheelLED})")
         return
-
-    # My "synthezier" object that does the stuff that I need.
-    #
-    synth = fSynth.FeatherSynth(USE_STEREO,
-                                i2s_bit_clock = AUDIO_OUT_I2S_BIT, 
-                                i2s_word_select = AUDIO_OUT_I2S_WORD, 
-                                i2s_data = AUDIO_OUT_I2S_DATA)
-    synth.setVolume(0.75)
 
 
     waveIndex = 0
@@ -175,11 +178,6 @@ def main():
     displayLeftStatus(display, waveName, lfoMode)
 
     dSleepMilliseconds = 0
-    # displayDelay(display, dSleepMilliseconds)
-
-    # iter = 1
-    # wheelPositionLast = None
-    # wheelButtonHeld = False
 
     # Play notes from a chromatic scale, as opposed to a continuous range of frequencies?
     # That is, integer MIDI numbers .vs. fractional.
@@ -188,9 +186,6 @@ def main():
 
     # Instructions here?
     display.setTextAreaR("Started!")
-
-    # neoState = False
-    # neoTime = time.monotonic_ns()
 
     gmenu = gestureMenu.GestureMenu(gestureSensor, display, menuData, windowSize=4)
 
@@ -294,27 +289,30 @@ def main():
                 # f2 = clamp(r2*100, 1000, 20000)
                 f2 = f1 - r2
                 
-                print(f"drone: {f1} {f2}")
+                # print(f"drone: {f1} {f2}")
+                displayDroneMode(display, f1, f2)
                 synth.drone(f1, f2)
                 pass
 
-            midiNote = r1 / 4
+            midiNote = r1 / 5
             if midiNote > 120:
                 midiNote = 120
 
             if chromatic:
                 midiNote = int(midiNote)
 
-            # print(f"{r1} -> {midiNote}")
+            print(f"{r1}mm -> MIDI {midiNote} -> {synthio.midi_to_hz(midiNote)}")
             # display.setTextAreaR(f"r1={r1}\nr2={r2}")
+
+            displayMainFreq(display, f"{synthio.midi_to_hz(midiNote):4.2f} Hz")
 
             synth.play(midiNote)
             time.sleep(dSleepMilliseconds/100)
 
         else: # no proximity detected
             synth.stop()
+            displayMainFreq(display, "")
 
-        # iter += 1
 
 
 # OK, let's do it! :-)

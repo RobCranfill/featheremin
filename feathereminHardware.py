@@ -1,6 +1,9 @@
 import board
-import digitalio as feather_digitalio
 import gc
+
+import digitalio as feather_digitalio
+
+import featherSynth5 as fSynth
 
 
 #############################################################3
@@ -13,16 +16,9 @@ import gc
 # Adafruit hardware libraries - www.adafruit.com
 import adafruit_vl53l0x
 from adafruit_apds9960.apds9960 import APDS9960
-# import adafruit_max9744
-# from adafruit_seesaw import seesaw, rotaryio, digitalio, neopixel
-
 
 # The L0X defaults to I2C 0x29; we have two, one of which we will re-assign to this address.
 L0X_B_ALTERNATE_I2C_ADDR = 0x30
-
-# ROTARY_ENCODER_I2C_ADDR = 0x36
-# SEE_SAW_BUTTON_PIN_WTF = 24  # FIXME: wtf is this magic number?
-# INITIAL_20W_AMP_VOLUME = 10 # 25 is max for 20W amp and 3W 4 ohm speaker with 12v to amp.
 
 
 # LCD display
@@ -51,47 +47,23 @@ class FeatereminHardware:
 
     Mostly none of this checks for errors (missing hardware) yet - it will just malf.
 
-    Returns:
-        list of objects: the various hardware items initialized.
+    Returns: Nothing. Call getHardwareItems() to get the list of hardware objects.
     """
 
-    # TODO: use named params?
-    # TODO: init the audio hardware too (those params are unused so far)
-
+    # TODO: use named params
     def __init__(self,
                 display_cs_pin, display_dc_pin, display_reset_pin,
                 audio_out_i2s_bit_pin, audio_out_i2s_word_pin, audio_out_i2s_data_pin,
                 l0x_a_reset_out_pin
                 ):
 
-        # we don't really need these instance vars?
-
-        # self._display_cs_pin = display_cs_pin
-        # self._display_dc_pin = display_dc_pin
-        # self._display_reset_pin = display_reset_pin
-        # self._audio_out_i2s_bit_pin = audio_out_i2s_bit_pin
-        # self._audio_out_i2s_word_pin = audio_out_i2s_word_pin
-        # self._audio_out_i2s_data_pin = audio_out_i2s_data_pin
-        # self._l0x_a_reset_out_pin = l0x_a_reset_out_pin
-
-# was:
-# def init_hardware() -> tuple[adafruit_vl53l0x.VL53L0X,   # 'A' ToF sensor
-#                             adafruit_vl53l0x.VL53L0X,    # 'B' ToF sensor
-#                             APDS9960,                    # gesture sensor
-#                             fDisplay.FeathereminDisplay, # our display object
-#                             adafruit_max9744.MAX9744,    # big amplifier, or None
-#                             rotaryio.IncrementalEncode,  # rotary encoder
-#                             digitalio.DigitalIO,         # pushbutton in rotary encoder
-#                             neopixel.NeoPixel            # neopixel in rotary encoder
-#                             ]:
-
+        # Easist way to init I2C on a Feather
         self._i2c = None
-        # Easist way to init I2C on a Feather:
         try:
             self._i2c = board.STEMMA_I2C()
         except:
             print("board.STEMMA_I2C failed! Is the Stemma bus connected? It would seem not.")
-            # return tuple()
+            # return tuple() # fail fast?
 
         # For fun
         showI2Cbus(self._i2c)
@@ -185,42 +157,14 @@ class FeatereminHardware:
             print("**** No APDS9960? Continuing....")
 
 
-        # # ------------------ MAX9744 amp, if any
-        # # TODO: merge this into the Synth object? Or at least hand it to that object to use?
-        # amp = None
-        # # try:
-        # #     amp = adafruit_max9744.MAX9744(self._i2c)
-        # #     amp.volume = INITIAL_20W_AMP_VOLUME
-        # #     print("MAX9744 amp init OK")
-        # # except Exception as e:
-        # #     print(f"No MAX9744 amplifier found: '{e}' - OK?")
-        # #     amp = None
-
-        # # ------------------ Rotary encoder
-        # encoder, wheel_button, pixel = None, None, None
-        # # try:
-        # #     ss = seesaw.Seesaw(self._i2c, addr=ROTARY_ENCODER_I2C_ADDR)
-        # #     seesaw_v = (ss.get_version() >> 16) & 0xFFFF
-        # #     # print(f"Found product {seesaw_v}")
-        # #     if seesaw_v != 4991:
-        # #         print("Wrong rotary encoder firmware version? Continuing...")
-        # #         # what are we supposed to do about this??
-        # #     encoder = rotaryio.IncrementalEncoder(ss)
-        # #
-        # #     # the "button" that is got by pushing down on the encoder wheel
-        # #     ss.pin_mode(SEE_SAW_BUTTON_PIN_WTF, ss.INPUT_PULLUP)
-        # #     wheel_button = digitalio.DigitalIO(ss, 24)
-        # #
-        # #     # TODO: tried to do something with the Neopixel but haven't figured anything out yet. :-/
-        # #     pixel = neopixel.NeoPixel(ss, 6, 1)
-        # #   
-        # #     pixel.fill(0x000100) # very light green - for go!
-        # #     # pixel.brightness = 0.1
-        # #
-        # #     print("Rotary encoder init OK")
-        # #
-        # # except:
-        # #     print(f"\n**** No rotary encoder at I2C {hex(ROTARY_ENCODER_I2C_ADDR)}? OK\n")
+        # My "synthezier" object that does the stuff that I need.
+        #
+        USE_STEREO = True
+        self._synth = fSynth.FeatherSynth(USE_STEREO,
+                                    i2s_bit_clock = audio_out_i2s_bit_pin, 
+                                    i2s_word_select = audio_out_i2s_word_pin, 
+                                    i2s_data = audio_out_i2s_data_pin)
+        self._synth.setVolume(0.75)
 
 
         showMem()
@@ -235,15 +179,23 @@ class FeatereminHardware:
                         adafruit_vl53l0x.VL53L0X,       # 'A' ToF sensor
                         adafruit_vl53l0x.VL53L0X,       # 'B' ToF sensor
                         APDS9960,                       # gesture sensor
-                        fDisplay.FeathereminDisplay     # our display object
+                        fDisplay.FeathereminDisplay,    # our display object
+                        fSynth.FeatherSynth             # our synth thingy
                         ]:
+        '''
+        Return a tuple of all the hardare objects.
 
-        return self._L0X_A, self._L0X_B, self._apds, self._display
+        '''
+        return self._L0X_A, self._L0X_B, self._apds, self._display, self._synth
 
 
     def __del__(self):
         ''' Destructor
         '''
+
+        # de-init the synth?
+        # self._synth. ??
+
 
         # release the I2C bus
         self._i2c.deinit()
